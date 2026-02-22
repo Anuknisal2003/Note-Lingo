@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1092284736352",
+    "project_id": "note-lingo-54cc2",
+    "storage_bucket": "note-lingo-54cc2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1092284736352:android:1507b0126b741ff68b7405",
+        "android_client_info": {
+          "package_name": "com.example.note_lingo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyChbG09F4cMgH1jE0v2DIhFHvKQKFv4FIs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
