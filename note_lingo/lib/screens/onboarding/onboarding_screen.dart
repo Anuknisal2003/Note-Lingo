@@ -107,7 +107,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   @override
   Widget build(BuildContext context) {
     final page = _pages[_current];
-    final size = MediaQuery.of(context).size;
 
     return Scaffold(
       backgroundColor: AppColors.bgDark,
