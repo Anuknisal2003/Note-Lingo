@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
@@ -132,8 +134,8 @@ class ProfileScreen extends StatelessWidget {
                 if (!context.mounted) return;
                 Navigator.of(context).pushAndRemoveUntil(
                   PageRouteBuilder(
-                    pageBuilder: (_, __, ___) => const LoginScreen(),
-                    transitionsBuilder: (_, anim, __, child) =>
+                    pageBuilder: (_, _, _) => const LoginScreen(),
+                    transitionsBuilder: (_, anim, _, child) =>
                         FadeTransition(opacity: anim, child: child),
                     transitionDuration: const Duration(milliseconds: 400),
                   ),
