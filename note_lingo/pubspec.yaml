@@ -58,7 +58,10 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
-  assets:
+dependency_overrides:
+  record_linux: ^1.0.0
+
+assets:
     - assets/images/
     - assets/animations/
     - assets/.env
