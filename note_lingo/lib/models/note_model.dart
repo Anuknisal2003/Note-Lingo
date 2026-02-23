@@ -181,5 +181,5 @@ class NoteModel {
     return '${text.substring(0, 120)}...';
   }
 
-  get categoryLabel => null;
+  Null get categoryLabel => null;
 }
