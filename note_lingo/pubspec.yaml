@@ -23,6 +23,7 @@ dependencies:
   # ── Audio & Recording ────────────────────────────────────────
   record: ^5.2.0
   permission_handler: ^11.4.0
+  just_audio: ^0.9.42
 
   # ── HTTP / AI ────────────────────────────────────────────────
   http: ^1.2.2
@@ -42,6 +43,7 @@ dependencies:
   uuid: ^4.5.1
   shared_preferences: ^2.3.4
   flutter_dotenv: ^5.2.1
+  connectivity_plus: ^6.1.3
 
   # ── Google Sign-In ───────────────────────────────────────────
   google_sign_in: ^6.2.2
@@ -58,10 +60,12 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
-dependency_overrides:
-  record_linux: ^1.0.0
-
-assets:
+  assets:
     - assets/images/
     - assets/animations/
     - assets/.env
+
+dependency_overrides:
+  record_linux: ^1.0.0
+
+
