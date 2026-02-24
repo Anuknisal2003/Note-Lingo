@@ -27,12 +27,10 @@ class _RecordingScreenState extends State<RecordingScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1400),
     )..repeat(reverse: true);
-
     _waveCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
     )..repeat();
-
     _pulseAnim = CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut);
   }
 
@@ -43,14 +41,36 @@ class _RecordingScreenState extends State<RecordingScreen>
     super.dispose();
   }
 
-  void _onStop(BuildContext ctx, RecordingProvider rp) async {
-    await rp.stopRecording(category: _category);
+  // ── Stop + navigate ──────────────────────────────────────────
+  Future<void> _onStop(RecordingProvider rp, String language) async {
+    await rp.stopRecording(category: _category, language: language);
     if (!mounted) return;
+
+    if (rp.error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline, color: AppColors.error, size: 18),
+              const SizedBox(width: 8),
+              Expanded(child: Text(rp.error!)),
+            ],
+          ),
+          backgroundColor: AppColors.bgSurface,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+      rp.clearError();
+      return;
+    }
 
     if (rp.processedNote != null) {
       final note = rp.processedNote!;
       rp.clearProcessed();
-      Navigator.of(ctx).pushReplacement(
+
+      // Save note via NotesProvider then navigate
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (_) => NoteDetailScreen(note: note, isNew: true),
         ),
@@ -58,17 +78,19 @@ class _RecordingScreenState extends State<RecordingScreen>
     }
   }
 
-  Future<bool> _onWillPop(RecordingProvider rp) async {
-    if (!rp.isRecording) return true;
+  Future<bool> _confirmDiscard(RecordingProvider rp) async {
+    if (!rp.isRecording && !rp.isPaused) return true;
     final result = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Stop Recording?'),
-        content: const Text('Your current recording will be discarded.'),
+        title: const Text('Discard Recording?'),
+        content: const Text(
+          'Your current recording will be lost. This cannot be undone.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: const Text('Keep Recording'),
           ),
           TextButton(
             onPressed: () {
@@ -92,9 +114,12 @@ class _RecordingScreenState extends State<RecordingScreen>
     final lang = context.watch<LanguageProvider>();
 
     return PopScope(
-      canPop: !rp.isRecording,
+      canPop: !rp.isRecording && !rp.isPaused,
       onPopInvokedWithResult: (didPop, _) async {
-        if (!didPop) await _onWillPop(rp);
+        if (!didPop) {
+          final ok = await _confirmDiscard(rp);
+          if (ok && mounted) Navigator.pop(context);
+        }
       },
       child: Scaffold(
         backgroundColor: AppColors.bgDark,
@@ -102,9 +127,8 @@ class _RecordingScreenState extends State<RecordingScreen>
           leading: IconButton(
             icon: const Icon(Icons.close_rounded),
             onPressed: () async {
-              if (await _onWillPop(rp)) {
-                if (mounted) Navigator.pop(context);
-              }
+              final ok = await _confirmDiscard(rp);
+              if (ok && mounted) Navigator.pop(context);
             },
           ),
           title: const Text('New Recording'),
@@ -126,34 +150,51 @@ class _RecordingScreenState extends State<RecordingScreen>
                   children: [
                     const SizedBox(height: 24),
 
-                    // Visualizer
+                    // ── Visualizer ──────────────────────────
                     _RecordVisualizer(
                       isRecording: rp.isRecording,
                       isPaused: rp.isPaused,
                       isProcessing: rp.isProcessing,
                       pulseAnim: _pulseAnim,
-                      waveCtrl: _waveCtrl,
                     ),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 24),
 
-                    // Timer
+                    // ── Timer ───────────────────────────────
                     Text(
                       rp.formattedTime,
-                      style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                        fontFeatures: [const FontFeature.tabularFigures()],
-                        letterSpacing: 4,
-                      ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.displayLarge?.copyWith(letterSpacing: 4),
                     ),
                     const SizedBox(height: 8),
+
+                    // ── Status ──────────────────────────────
                     _StatusLabel(
                       isRecording: rp.isRecording,
                       isPaused: rp.isPaused,
                       isProcessing: rp.isProcessing,
                       processingStatus: rp.processingStatus,
                     ),
-                    const SizedBox(height: 32),
 
-                    // Category (only when idle)
+                    // ── Upload progress ─────────────────────
+                    if (rp.isProcessing &&
+                        rp.uploadProgress > 0 &&
+                        rp.uploadProgress < 1) ...[
+                      const SizedBox(height: 12),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: rp.uploadProgress,
+                          backgroundColor: AppColors.bgBorder,
+                          color: AppColors.primary,
+                          minHeight: 3,
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 28),
+
+                    // ── Category (only when idle) ───────────
                     if (!rp.isRecording &&
                         !rp.isPaused &&
                         !rp.isProcessing) ...[
@@ -161,12 +202,15 @@ class _RecordingScreenState extends State<RecordingScreen>
                         selected: _category,
                         onChanged: (c) => setState(() => _category = c),
                       ),
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 28),
                     ],
 
-                    // Live transcript
-                    if (rp.liveTranscript.isNotEmpty || rp.isRecording) ...[
+                    // ── Live transcript ─────────────────────
+                    if (rp.liveTranscript.isNotEmpty) ...[
                       _LiveTranscript(text: rp.liveTranscript),
+                      const SizedBox(height: 24),
+                    ] else if (rp.isRecording) ...[
+                      _LiveTranscript(text: ''),
                       const SizedBox(height: 24),
                     ],
                   ],
@@ -174,7 +218,7 @@ class _RecordingScreenState extends State<RecordingScreen>
               ),
             ),
 
-            // Controls
+            // ── Controls ────────────────────────────────────
             _Controls(
               isRecording: rp.isRecording,
               isPaused: rp.isPaused,
@@ -182,7 +226,7 @@ class _RecordingScreenState extends State<RecordingScreen>
               onStart: () => rp.startRecording(),
               onPause: () => rp.pauseRecording(),
               onResume: () => rp.resumeRecording(),
-              onStop: () => _onStop(context, rp),
+              onStop: () => _onStop(rp, lang.selectedLanguage),
             ),
           ],
         ),
@@ -198,14 +242,12 @@ class _RecordVisualizer extends StatelessWidget {
   final bool isPaused;
   final bool isProcessing;
   final Animation<double> pulseAnim;
-  final AnimationController waveCtrl;
 
   const _RecordVisualizer({
     required this.isRecording,
     required this.isPaused,
     required this.isProcessing,
     required this.pulseAnim,
-    required this.waveCtrl,
   });
 
   @override
@@ -247,7 +289,7 @@ class _RecordVisualizer extends StatelessWidget {
               ),
             ),
           ],
-          if (isProcessing) ...[
+          if (isProcessing)
             SizedBox(
               width: 140,
               height: 140,
@@ -256,16 +298,12 @@ class _RecordVisualizer extends StatelessWidget {
                 strokeWidth: 2,
               ),
             ),
-          ],
-          // Main circle button
           Container(
             width: 100,
             height: 100,
             decoration: BoxDecoration(
               gradient: isRecording
                   ? AppColors.recordGradient
-                  : isProcessing
-                  ? AppColors.primaryGradient
                   : AppColors.primaryGradient,
               shape: BoxShape.circle,
               boxShadow: [
@@ -314,23 +352,27 @@ class _StatusLabel extends StatelessWidget {
     Color color;
 
     if (isProcessing) {
-      label = processingStatus;
+      label = processingStatus.isNotEmpty ? processingStatus : 'Processing…';
       color = AppColors.primary;
     } else if (isPaused) {
-      label = 'Paused — tap Resume to continue';
+      label = '⏸  Paused — tap Resume to continue';
       color = AppColors.warning;
     } else if (isRecording) {
       label = '● Recording — speak clearly';
       color = AppColors.error;
     } else {
-      label = 'Ready to record';
+      label = 'Tap Start to begin recording';
       color = AppColors.textMuted;
     }
 
-    return Text(
-      label,
-      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: color),
-      textAlign: TextAlign.center,
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      child: Text(
+        label,
+        key: ValueKey(label),
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: color),
+        textAlign: TextAlign.center,
+      ),
     );
   }
 }
@@ -419,6 +461,7 @@ class _LiveTranscript extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
+      constraints: const BoxConstraints(maxHeight: 160),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.bgCard,
@@ -427,6 +470,7 @@ class _LiveTranscript extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
@@ -446,11 +490,18 @@ class _LiveTranscript extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          Text(
-            text.isEmpty ? 'Listening...' : text,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: text.isEmpty ? AppColors.textMuted : null,
-              fontStyle: text.isEmpty ? FontStyle.italic : null,
+          Flexible(
+            child: SingleChildScrollView(
+              child: Text(
+                text.isEmpty ? 'Listening…' : text,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: text.isEmpty
+                      ? AppColors.textMuted
+                      : AppColors.textPrimary,
+                  fontStyle: text.isEmpty ? FontStyle.italic : null,
+                  height: 1.6,
+                ),
+              ),
             ),
           ),
         ],
@@ -510,9 +561,9 @@ class _Controls extends StatelessWidget {
             _CtrlBtn(
               gradient: AppColors.primaryGradient,
               glowColor: AppColors.primary,
-              icon: Icons.hourglass_top_rounded,
+              icon: Icons.auto_awesome_rounded,
               size: 72,
-              label: 'Processing...',
+              label: 'AI Processing…',
               onTap: null,
             )
           else ...[
@@ -620,22 +671,20 @@ class _LanguagePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        showModalBottomSheet(
-          context: context,
-          backgroundColor: AppColors.bgCard,
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          builder: (_) => _LanguageSheet(
-            current: value,
-            onSelect: (v) {
-              onChanged(v);
-              Navigator.pop(context);
-            },
-          ),
-        );
-      },
+      onTap: () => showModalBottomSheet(
+        context: context,
+        backgroundColor: AppColors.bgCard,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (_) => _LanguageSheet(
+          current: value,
+          onSelect: (v) {
+            onChanged(v);
+            Navigator.pop(context);
+          },
+        ),
+      ),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
@@ -688,7 +737,7 @@ class _LanguageSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final langs = [
+    const langs = [
       ('en', '🇬🇧', 'English'),
       ('si', '🇱🇰', 'Sinhala'),
       ('ta', '🇱🇰', 'Tamil'),
