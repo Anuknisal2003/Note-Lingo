@@ -1,12 +1,81 @@
+// lib/services/export_service.dart
+//
+// Generates and shares note exports:
+//  - PDF  (using the pdf package)
+//  - TXT  (plain text)
+//  - DOCX (RTF-based, opens in Word/Google Docs)
+
 import 'dart:io';
+import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 import '../models/note_model.dart';
 
 class ExportService {
-  // ── PDF Export ──────────────────────────────────
+  // ── Singleton ────────────────────────────────────────────────
+  static final ExportService _instance = ExportService._internal();
+  factory ExportService() => _instance;
+  ExportService._internal();
+
+  // ════════════════════════════════════════════════════════════
+  //  EXPORT ROUTER
+  // ════════════════════════════════════════════════════════════
+
+  Future<void> export(
+    NoteModel note, {
+    required String format,
+    required bool includeSummary,
+    required bool includeTranscript,
+    required bool includeKeywords,
+    required bool includeMeta,
+  }) async {
+    File file;
+
+    switch (format) {
+      case 'pdf':
+        file = await exportToPdf(
+          note,
+          includeSummary: includeSummary,
+          includeTranscript: includeTranscript,
+          includeKeywords: includeKeywords,
+          includeMeta: includeMeta,
+        );
+        break;
+      case 'txt':
+        file = await exportToTxt(
+          note,
+          includeSummary: includeSummary,
+          includeTranscript: includeTranscript,
+          includeKeywords: includeKeywords,
+          includeMeta: includeMeta,
+        );
+        break;
+      case 'docx':
+        file = await exportToDocx(
+          note,
+          includeSummary: includeSummary,
+          includeTranscript: includeTranscript,
+          includeKeywords: includeKeywords,
+          includeMeta: includeMeta,
+        );
+        break;
+      default:
+        throw Exception('Unknown export format: $format');
+    }
+
+    await Share.shareXFiles(
+      [XFile(file.path)],
+      subject: note.title,
+      text: 'Exported from Note Lingo',
+    );
+  }
+
+  // ════════════════════════════════════════════════════════════
+  //  PDF EXPORT
+  // ════════════════════════════════════════════════════════════
+
   Future<File> exportToPdf(
     NoteModel note, {
     required bool includeSummary,
@@ -15,180 +84,409 @@ class ExportService {
     required bool includeMeta,
   }) async {
     final pdf = pw.Document();
+    final dateStr = DateFormat('MMMM d, yyyy').format(note.createdAt);
+
+    // Color palette
+    const primaryColor = PdfColor.fromInt(0xFF6C63FF);
+    const accentColor = PdfColor.fromInt(0xFF00D9B5);
+    const lightBg = PdfColor.fromInt(0xFFF5F4FF);
+    const textDark = PdfColor.fromInt(0xFF1A1A2E);
+    const textMuted = PdfColor.fromInt(0xFF6B6882);
+    const borderColor = PdfColor.fromInt(0xFFE5E4F0);
 
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(40),
-        header: (context) => pw.Container(
-          padding: const pw.EdgeInsets.only(bottom: 12),
+        margin: const pw.EdgeInsets.all(44),
+        // ── Header on every page ──────────────────────────────
+        header: (ctx) => pw.Container(
+          padding: const pw.EdgeInsets.only(bottom: 10),
           decoration: const pw.BoxDecoration(
-            border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey300)),
+            border: pw.Border(
+              bottom: pw.BorderSide(color: borderColor, width: 0.5),
+            ),
           ),
           child: pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
               pw.Text(
                 'Note Lingo',
-                style: pw.TextStyle(fontSize: 12, color: PdfColors.grey600),
+                style: pw.TextStyle(
+                  fontSize: 10,
+                  color: primaryColor,
+                  fontWeight: pw.FontWeight.bold,
+                ),
               ),
               pw.Text(
-                DateFormat('MMM dd, yyyy').format(note.createdAt),
-                style: pw.TextStyle(fontSize: 12, color: PdfColors.grey600),
+                dateStr,
+                style: pw.TextStyle(fontSize: 9, color: textMuted),
               ),
             ],
           ),
         ),
-        build: (context) => [
-          // Title
-          pw.Container(
-            padding: const pw.EdgeInsets.all(16),
-            decoration: pw.BoxDecoration(
-              color: const PdfColor(0.31, 0.27, 0.90),
-              borderRadius: pw.BorderRadius.circular(8),
-            ),
-            child: pw.Text(
-              note.title,
-              style: pw.TextStyle(
-                fontSize: 22,
-                fontWeight: pw.FontWeight.bold,
-                color: PdfColors.white,
-              ),
+        // ── Footer on every page ──────────────────────────────
+        footer: (ctx) => pw.Container(
+          padding: const pw.EdgeInsets.only(top: 8),
+          decoration: const pw.BoxDecoration(
+            border: pw.Border(
+              top: pw.BorderSide(color: borderColor, width: 0.5),
             ),
           ),
-          pw.SizedBox(height: 12),
-          // Meta
-          if (includeMeta) ...[
-            pw.Row(
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                'Generated by Note Lingo AI',
+                style: pw.TextStyle(fontSize: 8, color: textMuted),
+              ),
+              pw.Text(
+                'Page ${ctx.pageNumber} of ${ctx.pagesCount}',
+                style: pw.TextStyle(fontSize: 8, color: textMuted),
+              ),
+            ],
+          ),
+        ),
+        build: (ctx) => [
+          // ── Title block ──────────────────────────────────────
+          pw.Container(
+            padding: const pw.EdgeInsets.all(20),
+            decoration: pw.BoxDecoration(
+              gradient: const pw.LinearGradient(
+                colors: [
+                  PdfColor.fromInt(0xFF6C63FF),
+                  PdfColor.fromInt(0xFF9B59B6),
+                ],
+              ),
+              borderRadius: pw.BorderRadius.circular(10),
+            ),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                _pdfBadge('Category: ${note.categoryLabel}'),
-                pw.SizedBox(width: 8),
-                _pdfBadge('Language: ${note.languageLabel}'),
-                pw.SizedBox(width: 8),
-                _pdfBadge('${note.wordCount} words'),
-                pw.SizedBox(width: 8),
-                _pdfBadge(note.formattedDuration),
+                pw.Text(
+                  note.title,
+                  style: pw.TextStyle(
+                    fontSize: 22,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColors.white,
+                  ),
+                ),
+                pw.SizedBox(height: 8),
+                pw.Row(
+                  children: [
+                    _pdfPill(
+                      '${note.category.emoji} ${note.category.label}',
+                      PdfColors.white,
+                    ),
+                    pw.SizedBox(width: 8),
+                    _pdfPill(
+                      '${note.languageFlag} ${note.languageLabel}',
+                      PdfColors.white,
+                    ),
+                  ],
+                ),
               ],
             ),
-            pw.SizedBox(height: 16),
+          ),
+          pw.SizedBox(height: 16),
+
+          // ── Metadata row ─────────────────────────────────────
+          if (includeMeta) ...[
+            pw.Container(
+              padding: const pw.EdgeInsets.all(14),
+              decoration: pw.BoxDecoration(
+                color: lightBg,
+                borderRadius: pw.BorderRadius.circular(8),
+              ),
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
+                children: [
+                  _metaCell('📅 Date', dateStr),
+                  _metaCell('⏱ Duration', note.formattedDuration),
+                  _metaCell('📝 Words', '${note.wordCount}'),
+                ],
+              ),
+            ),
+            pw.SizedBox(height: 20),
           ],
-          // Keywords
+
+          // ── Keywords ─────────────────────────────────────────
           if (includeKeywords && note.keywords.isNotEmpty) ...[
-            _pdfSectionTitle('Keywords'),
+            _sectionHeader('Keywords', primaryColor),
+            pw.SizedBox(height: 8),
             pw.Wrap(
               spacing: 6,
               runSpacing: 6,
-              children: note.keywords.map((k) => _pdfBadge('#$k')).toList(),
+              children: note.keywords
+                  .map((k) => _pdfPill('#$k', primaryColor))
+                  .toList(),
             ),
-            pw.SizedBox(height: 16),
+            pw.SizedBox(height: 20),
           ],
-          // Summary
+
+          // ── AI Summary ────────────────────────────────────────
           if (includeSummary && note.summary.isNotEmpty) ...[
-            _pdfSectionTitle('AI Summary'),
+            _sectionHeader('AI Summary', accentColor),
+            pw.SizedBox(height: 8),
             pw.Container(
-              padding: const pw.EdgeInsets.all(12),
+              padding: const pw.EdgeInsets.all(14),
               decoration: pw.BoxDecoration(
-                color: const PdfColor(0.94, 0.97, 1.0),
-                borderRadius: pw.BorderRadius.circular(6),
+                color: const PdfColor.fromInt(0xFFF0FDFB),
+                borderRadius: pw.BorderRadius.circular(8),
+                border: pw.Border.all(
+                  color: const PdfColor.fromInt(0xFFB2F0E8),
+                  width: 0.5,
+                ),
               ),
               child: pw.Text(
                 note.summary,
-                style: const pw.TextStyle(fontSize: 11, lineSpacing: 4),
+                style: pw.TextStyle(
+                  fontSize: 11,
+                  color: textDark,
+                  lineSpacing: 5,
+                ),
               ),
             ),
-            pw.SizedBox(height: 16),
+            pw.SizedBox(height: 20),
           ],
-          // Transcript
+
+          // ── Full Transcript ───────────────────────────────────
           if (includeTranscript && note.transcription.isNotEmpty) ...[
-            _pdfSectionTitle('Full Transcript'),
-            pw.Text(
-              note.transcription,
-              style: const pw.TextStyle(fontSize: 10, lineSpacing: 3),
+            _sectionHeader('Full Transcript', primaryColor),
+            pw.SizedBox(height: 8),
+            pw.Container(
+              padding: const pw.EdgeInsets.all(14),
+              decoration: pw.BoxDecoration(
+                color: lightBg,
+                borderRadius: pw.BorderRadius.circular(8),
+                border: pw.Border.all(color: borderColor, width: 0.5),
+              ),
+              child: pw.Text(
+                note.transcription,
+                style: pw.TextStyle(
+                  fontSize: 10.5,
+                  color: textDark,
+                  lineSpacing: 4,
+                  height: 1.5,
+                ),
+              ),
             ),
           ],
         ],
       ),
     );
 
+    // Save to temp directory
     final dir = await getTemporaryDirectory();
-    final file = File('${dir.path}/${note.title.replaceAll(' ', '_')}.pdf');
+    final safeName = _safeName(note.title);
+    final file = File('${dir.path}/$safeName.pdf');
     await file.writeAsBytes(await pdf.save());
     return file;
   }
 
-  pw.Widget _pdfSectionTitle(String title) {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.only(bottom: 6),
-      child: pw.Text(
-        title,
-        style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
-      ),
+  // ── PDF helpers ──────────────────────────────────────────────
+
+  pw.Widget _sectionHeader(String title, PdfColor color) {
+    return pw.Row(
+      children: [
+        pw.Container(
+          width: 3,
+          height: 18,
+          decoration: pw.BoxDecoration(
+            color: color,
+            borderRadius: pw.BorderRadius.circular(2),
+          ),
+        ),
+        pw.SizedBox(width: 8),
+        pw.Text(
+          title,
+          style: pw.TextStyle(
+            fontSize: 14,
+            fontWeight: pw.FontWeight.bold,
+            color: color,
+          ),
+        ),
+      ],
     );
   }
 
-  pw.Widget _pdfBadge(String text) {
+  pw.Widget _pdfPill(String text, PdfColor textColor) {
     return pw.Container(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: pw.BoxDecoration(
-        color: PdfColors.grey200,
-        borderRadius: pw.BorderRadius.circular(12),
+        color: textColor == PdfColors.white
+            ? PdfColors.white.flatten(background: PdfColor.fromInt(0x33FFFFFF))
+            : const PdfColor.fromInt(0xFFF0EEFF),
+        borderRadius: pw.BorderRadius.circular(20),
       ),
-      child: pw.Text(text, style: const pw.TextStyle(fontSize: 9)),
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(
+          fontSize: 9,
+          color: textColor,
+          fontWeight: pw.FontWeight.bold,
+        ),
+      ),
     );
   }
 
-  // ── DOCX Export ─────────────────────────────────
-  // For DOCX we generate an RTF-compatible .docx using basic structure
-  // For full DOCX support add 'docx' package or use 'dart_docx'
+  pw.Widget _metaCell(String label, String value) {
+    return pw.Column(
+      children: [
+        pw.Text(
+          value,
+          style: pw.TextStyle(
+            fontSize: 12,
+            fontWeight: pw.FontWeight.bold,
+            color: const PdfColor.fromInt(0xFF1A1A2E),
+          ),
+        ),
+        pw.SizedBox(height: 2),
+        pw.Text(
+          label,
+          style: pw.TextStyle(
+            fontSize: 9,
+            color: const PdfColor.fromInt(0xFF6B6882),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ════════════════════════════════════════════════════════════
+  //  TXT EXPORT
+  // ════════════════════════════════════════════════════════════
+
+  Future<File> exportToTxt(
+    NoteModel note, {
+    required bool includeSummary,
+    required bool includeTranscript,
+    required bool includeKeywords,
+    required bool includeMeta,
+  }) async {
+    final buf = StringBuffer();
+    final dateStr = DateFormat('MMMM d, yyyy – HH:mm').format(note.createdAt);
+    final sep = '─' * 52;
+
+    buf.writeln('╔══════════════════════════════════════════════════╗');
+    buf.writeln('  NOTE LINGO');
+    buf.writeln('╚══════════════════════════════════════════════════╝');
+    buf.writeln();
+    buf.writeln(note.title.toUpperCase());
+    buf.writeln(sep);
+
+    if (includeMeta) {
+      buf.writeln('Category : ${note.category.label}');
+      buf.writeln('Language : ${note.languageLabel}');
+      buf.writeln('Date     : $dateStr');
+      buf.writeln('Duration : ${note.formattedDuration}');
+      buf.writeln('Words    : ${note.wordCount}');
+      buf.writeln(sep);
+    }
+
+    if (includeKeywords && note.keywords.isNotEmpty) {
+      buf.writeln();
+      buf.writeln('KEYWORDS');
+      buf.writeln(note.keywords.map((k) => '#$k').join('  '));
+      buf.writeln(sep);
+    }
+
+    if (includeSummary && note.summary.isNotEmpty) {
+      buf.writeln();
+      buf.writeln('AI SUMMARY');
+      buf.writeln(note.summary);
+      buf.writeln(sep);
+    }
+
+    if (includeTranscript && note.transcription.isNotEmpty) {
+      buf.writeln();
+      buf.writeln('FULL TRANSCRIPT');
+      buf.writeln(note.transcription);
+    }
+
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/${_safeName(note.title)}.txt');
+    await file.writeAsString(buf.toString(), flush: true);
+    return file;
+  }
+
+  // ════════════════════════════════════════════════════════════
+  //  DOCX EXPORT (RTF – opens in Word, Google Docs, Pages)
+  // ════════════════════════════════════════════════════════════
+
   Future<File> exportToDocx(
     NoteModel note, {
     required bool includeSummary,
     required bool includeTranscript,
     required bool includeKeywords,
+    required bool includeMeta,
   }) async {
-    // Build RTF content (compatible with Word)
-    final buffer = StringBuffer();
-    buffer.writeln('{\\rtf1\\ansi\\deff0');
-    buffer.writeln('{\\fonttbl{\\f0 Arial;}}');
-    buffer.writeln('\\f0\\fs28\\b ${_rtfEscape(note.title)}\\b0\\fs24\\par');
-    buffer.writeln('\\par');
+    final dateStr = DateFormat('MMMM d, yyyy').format(note.createdAt);
+    final buf = StringBuffer();
 
-    if (includeMeta_) {
-      buffer.writeln(
-        'Category: ${note.categoryLabel} | Language: ${note.languageLabel} | ${note.wordCount} words\\par\\par',
+    // RTF header
+    buf.write(r'{\rtf1\ansi\deff0');
+    buf.write(
+      r'{\fonttbl{\f0\fswiss\fcharset0 Arial;}{\f1\fmodern\fcharset0 Courier New;}}',
+    );
+    buf.write(
+      r'{\colortbl;\red108\green99\blue255;\red0\green217\blue181;\red26\green26\blue46;}',
+    );
+    buf.write(
+      r'\paperw12240\paperh15840\margl1800\margr1800\margt1440\margb1440',
+    );
+    buf.write(r'\fs24\f0\cf3');
+    buf.writeln();
+
+    // Title
+    buf.write(r'\cf1\fs36\b ');
+    buf.write(_rtf(note.title));
+    buf.write(r'\b0\fs24\cf3\par\par');
+
+    // Meta
+    if (includeMeta) {
+      buf.write(r'\fs20\cf3 ');
+      buf.write(
+        'Category: ${_rtf(note.category.label)}   '
+        'Language: ${_rtf(note.languageLabel)}   '
+        'Date: ${_rtf(dateStr)}   '
+        'Duration: ${_rtf(note.formattedDuration)}   '
+        'Words: ${note.wordCount}',
       );
+      buf.write(r'\par\par');
     }
 
+    // Keywords
     if (includeKeywords && note.keywords.isNotEmpty) {
-      buffer.writeln('\\b Keywords:\\b0\\par');
-      buffer.writeln(note.keywords.map((k) => '#$k').join(', '));
-      buffer.writeln('\\par\\par');
+      buf.write(r'\cf1\fs22\b Keywords:\b0\cf3\fs20\par ');
+      buf.write(note.keywords.map((k) => '#${_rtf(k)}').join('  '));
+      buf.write(r'\par\par');
     }
 
+    // Summary
     if (includeSummary && note.summary.isNotEmpty) {
-      buffer.writeln('\\b AI Summary:\\b0\\par');
-      buffer.writeln(_rtfEscape(note.summary));
-      buffer.writeln('\\par\\par');
+      buf.write(r'\cf1\fs22\b AI Summary:\b0\cf3\fs20\par ');
+      buf.write(_rtf(note.summary));
+      buf.write(r'\par\par');
     }
 
+    // Transcript
     if (includeTranscript && note.transcription.isNotEmpty) {
-      buffer.writeln('\\b Full Transcript:\\b0\\par');
-      buffer.writeln(_rtfEscape(note.transcription));
-      buffer.writeln('\\par');
+      buf.write(r'\cf1\fs22\b Full Transcript:\b0\cf3\fs20\par ');
+      buf.write(_rtf(note.transcription));
+      buf.write(r'\par');
     }
 
-    buffer.writeln('}');
+    buf.write('}');
 
     final dir = await getTemporaryDirectory();
-    final file = File('${dir.path}/${note.title.replaceAll(' ', '_')}.rtf');
-    await file.writeAsString(buffer.toString());
+    // Save as .rtf — Word and Google Docs open it natively
+    final file = File('${dir.path}/${_safeName(note.title)}.rtf');
+    await file.writeAsString(buf.toString(), flush: true);
     return file;
   }
 
-  // Flag to avoid undefined variable - set to true by default for docx
-  final bool includeMeta_ = true;
-
-  String _rtfEscape(String text) {
+  // ── RTF escaper ──────────────────────────────────────────────
+  String _rtf(String text) {
     return text
         .replaceAll('\\', '\\\\')
         .replaceAll('{', '\\{')
@@ -196,45 +494,11 @@ class ExportService {
         .replaceAll('\n', '\\par ');
   }
 
-  // ── TXT Export ──────────────────────────────────
-  Future<File> exportToTxt(
-    NoteModel note, {
-    required bool includeSummary,
-    required bool includeTranscript,
-  }) async {
-    final buffer = StringBuffer();
-    buffer.writeln('═══════════════════════════════════════');
-    buffer.writeln('  NOTE LINGO — ${note.title.toUpperCase()}');
-    buffer.writeln('═══════════════════════════════════════');
-    buffer.writeln('Category : ${note.categoryLabel}');
-    buffer.writeln('Language : ${note.languageLabel}');
-    buffer.writeln(
-      'Date     : ${DateFormat('MMM dd, yyyy').format(note.createdAt)}',
-    );
-    buffer.writeln('Duration : ${note.formattedDuration}');
-    buffer.writeln('Words    : ${note.wordCount}');
-    buffer.writeln('');
-
-    if (note.keywords.isNotEmpty) {
-      buffer.writeln('── KEYWORDS ──────────────────────────────');
-      buffer.writeln(note.keywords.map((k) => '#$k').join('  '));
-      buffer.writeln('');
-    }
-
-    if (includeSummary && note.summary.isNotEmpty) {
-      buffer.writeln('── AI SUMMARY ────────────────────────────');
-      buffer.writeln(note.summary);
-      buffer.writeln('');
-    }
-
-    if (includeTranscript && note.transcription.isNotEmpty) {
-      buffer.writeln('── FULL TRANSCRIPT ───────────────────────');
-      buffer.writeln(note.transcription);
-    }
-
-    final dir = await getTemporaryDirectory();
-    final file = File('${dir.path}/${note.title.replaceAll(' ', '_')}.txt');
-    await file.writeAsString(buffer.toString());
-    return file;
+  // ── Safe filename ────────────────────────────────────────────
+  String _safeName(String title) {
+    return title
+        .replaceAll(RegExp(r'[^\w\s-]'), '')
+        .replaceAll(' ', '_')
+        .substring(0, title.length.clamp(0, 40));
   }
 }
