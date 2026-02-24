@@ -1,157 +1,218 @@
-import 'dart:io';
+// lib/services/ai_service.dart
+//
+// Handles all AI operations:
+//  1. Speech-to-text  → OpenAI Whisper API
+//  2. Summarization   → OpenAI GPT-4o
+//  3. Keyword extract → OpenAI GPT-4o
+//  4. Title generate  → OpenAI GPT-4o
+
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'dart:io';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart' as http;
+import '../core/constants/app_constants.dart';
 
 class AiService {
-  static const String _whisperUrl =
-      'https://api.openai.com/v1/audio/transcriptions';
-  static const String _chatUrl = 'https://api.openai.com/v1/chat/completions';
+  // ── Singleton ────────────────────────────────────────────────
+  static final AiService _instance = AiService._internal();
+  factory AiService() => _instance;
+  AiService._internal();
 
-  // Load from .env file — see setup instructions below
-  String get _apiKey => dotenv.env['OPENAI_API_KEY'] ?? '';
-
-  // ── 1. TRANSCRIPTION (Whisper) ──────────────────
-  Future<String> transcribe(File audioFile, {String language = 'en'}) async {
-    final request = http.MultipartRequest('POST', Uri.parse(_whisperUrl));
-    request.headers['Authorization'] = 'Bearer $_apiKey';
-
-    request.files.add(
-      await http.MultipartFile.fromPath('file', audioFile.path),
-    );
-    request.fields['model'] = 'whisper-1';
-
-    // Map language codes for Whisper
-    final whisperLang = _mapLanguage(language);
-    if (whisperLang != null) {
-      request.fields['language'] = whisperLang;
+  String get _apiKey {
+    final key = dotenv.env['OPENAI_API_KEY'] ?? '';
+    if (key.isEmpty || key == 'sk-your-openai-key-here') {
+      throw AiException(
+        'OpenAI API key not set. Add it to assets/.env file.\n'
+        'Get your key at: https://platform.openai.com/api-keys',
+      );
     }
-    request.fields['response_format'] = 'text';
+    return key;
+  }
 
-    final streamedResponse = await request.send();
-    final response = await http.Response.fromStream(streamedResponse);
+  Map<String, String> get _headers => {
+    'Authorization': 'Bearer $_apiKey',
+    'Content-Type': 'application/json',
+  };
+
+  // ── 1. TRANSCRIPTION (Whisper) ───────────────────────────────
+  Future<String> transcribe(File audioFile, {String language = 'en'}) async {
+    final uri = Uri.parse('${AppConstants.openAiBaseUrl}/audio/transcriptions');
+    final request = http.MultipartRequest('POST', uri)
+      ..headers['Authorization'] = 'Bearer $_apiKey'
+      ..fields['model'] = AppConstants.whisperModel
+      ..fields['response_format'] = 'text';
+
+    // Map language code
+    final langCode = AppConstants.whisperLanguageCodes[language];
+    if (langCode != null) {
+      request.fields['language'] = langCode;
+    }
+
+    // Attach audio file
+    request.files.add(
+      await http.MultipartFile.fromPath(
+        'file',
+        audioFile.path,
+        // Whisper supports: mp3, mp4, mpeg, mpga, m4a, wav, webm
+      ),
+    );
+
+    final streamed = await request.send().timeout(
+      const Duration(seconds: 120),
+      onTimeout: () => throw AiException(
+        'Transcription timed out. Try a shorter recording.',
+      ),
+    );
+    final response = await http.Response.fromStream(streamed);
 
     if (response.statusCode == 200) {
-      return response.body.trim();
+      final text = response.body.trim();
+      if (text.isEmpty) throw AiException('No speech detected in recording.');
+      return text;
     } else {
-      throw 'Transcription failed: ${response.body}';
+      final body = jsonDecode(response.body);
+      throw AiException(
+        'Transcription failed (${response.statusCode}): '
+        '${body['error']?['message'] ?? response.body}',
+      );
     }
   }
 
-  // ── 2. SUMMARIZATION (GPT) ──────────────────────
-  Future<String> summarize(String text, {String language = 'en'}) async {
-    final langName = _languageName(language);
+  // ── 2. SUMMARIZATION (GPT-4o) ────────────────────────────────
+  Future<String> summarize(String transcript, {String language = 'en'}) async {
+    final langName = AppConstants.languageNames[language] ?? 'English';
+
     final prompt =
-        '''
-You are an expert note-taking assistant. Analyze the following transcript and create a concise, 
-well-structured summary. Use clear bullet points for key points. Respond in $langName.
+        '''You are an expert note-taking assistant for students, professionals, and researchers.
 
-Transcript:
-$text
+Analyze the following transcript and create a well-structured, concise summary.
+Respond entirely in $langName.
 
-Provide:
-- A brief overview (2-3 sentences)
-- Key points (bullet list)
-- Action items if any
+TRANSCRIPT:
+$transcript
 
-Keep it professional and under 200 words.
-''';
+Provide your response in this exact format:
 
-    return await _chatCompletion(prompt);
+OVERVIEW:
+[2-3 sentence overview of the main topic]
+
+KEY POINTS:
+• [Key point 1]
+• [Key point 2]
+• [Key point 3]
+• [Add more as needed]
+
+ACTION ITEMS (if any):
+• [Action item or conclusion]
+
+Keep the total summary under 250 words. Be specific and informative.''';
+
+    return await _chat(prompt, maxTokens: AppConstants.summaryMaxTokens);
   }
 
-  // ── 3. KEYWORD EXTRACTION ───────────────────────
-  Future<List<String>> extractKeywords(String text) async {
+  // ── 3. KEYWORD EXTRACTION (GPT-4o) ──────────────────────────
+  Future<List<String>> extractKeywords(String transcript) async {
     final prompt =
-        '''
-Extract 5-8 key topics/keywords from this text. Return ONLY a JSON array of strings.
-Example: ["machine learning", "neural networks", "training data"]
+        '''Extract exactly 5-8 important keywords or key phrases from this text.
+Return ONLY a valid JSON array of strings, nothing else. No explanation, no markdown.
+Example: ["machine learning","data analysis","neural networks"]
 
-Text: $text
-''';
+Text: ${transcript.substring(0, transcript.length.clamp(0, 1500))}''';
 
-    final response = await _chatCompletion(prompt);
+    final raw = await _chat(prompt, maxTokens: AppConstants.keywordMaxTokens);
+
     try {
-      // Clean the response and parse JSON
-      final cleaned = response
-          .replaceAll('```json', '')
-          .replaceAll('```', '')
-          .trim();
-      final List<dynamic> keywords = jsonDecode(cleaned);
-      return keywords.map((k) => k.toString()).take(8).toList();
-    } catch (e) {
-      // Fallback: split by commas if JSON fails
-      return response
+      // Clean any accidental markdown fences
+      final cleaned = raw.replaceAll(RegExp(r'```json|```'), '').trim();
+      final List<dynamic> list = jsonDecode(cleaned);
+      return list
+          .map((e) => e.toString().trim())
+          .where((e) => e.isNotEmpty)
+          .take(AppConstants.maxKeywords)
+          .toList();
+    } catch (_) {
+      // Fallback: parse comma-separated
+      return raw
           .replaceAll(RegExp(r'[\[\]"]'), '')
           .split(',')
           .map((s) => s.trim())
           .where((s) => s.isNotEmpty)
-          .take(8)
+          .take(AppConstants.maxKeywords)
           .toList();
     }
   }
 
-  // ── 4. TITLE GENERATION ─────────────────────────
-  Future<String> generateTitle(String text) async {
+  // ── 4. TITLE GENERATION (GPT-4o) ────────────────────────────
+  Future<String> generateTitle(String transcript) async {
+    final snippet = transcript.substring(0, transcript.length.clamp(0, 600));
+
     final prompt =
-        '''
-Generate a short, descriptive title (5-8 words) for this transcript. 
-Return ONLY the title, nothing else.
+        '''Generate a short, descriptive title (4-7 words) for a note based on this transcript.
+Return ONLY the title text. No quotes, no punctuation at end, nothing else.
 
-Transcript (first 500 chars): ${text.substring(0, text.length.clamp(0, 500))}
-''';
+Transcript excerpt: $snippet''';
 
-    final title = await _chatCompletion(prompt);
-    return title.replaceAll('"', '').trim();
+    final title = await _chat(prompt, maxTokens: AppConstants.titleMaxTokens);
+    return title.replaceAll('"', '').replaceAll("'", '').trim();
   }
 
-  // ── INTERNAL: Chat completion ───────────────────
-  Future<String> _chatCompletion(String prompt) async {
-    final response = await http.post(
-      Uri.parse(_chatUrl),
-      headers: {
-        'Authorization': 'Bearer $_apiKey',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'model': 'gpt-4o', // Use gpt-4o as gpt-5 is accessed same way
-        'messages': [
-          {'role': 'user', 'content': prompt},
-        ],
-        'max_tokens': 500,
-        'temperature': 0.3,
-      }),
-    );
+  // ── Internal: Chat completion ────────────────────────────────
+  Future<String> _chat(String prompt, {int maxTokens = 500}) async {
+    final uri = Uri.parse('${AppConstants.openAiBaseUrl}/chat/completions');
+
+    final response = await http
+        .post(
+          uri,
+          headers: _headers,
+          body: jsonEncode({
+            'model': AppConstants.gptModel,
+            'messages': [
+              {'role': 'user', 'content': prompt},
+            ],
+            'max_tokens': maxTokens,
+            'temperature': 0.3,
+          }),
+        )
+        .timeout(
+          const Duration(seconds: 60),
+          onTimeout: () => throw AiException(
+            'AI request timed out. Check your internet connection.',
+          ),
+        );
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      return data['choices'][0]['message']['content'].toString().trim();
+      final content = data['choices']?[0]?['message']?['content'] as String?;
+      if (content == null || content.isEmpty) {
+        throw AiException('Empty response from AI.');
+      }
+      return content.trim();
     } else {
-      throw 'AI request failed: ${response.body}';
+      final body = jsonDecode(response.body);
+      final msg = body['error']?['message'] ?? response.body;
+      if (response.statusCode == 401) {
+        throw AiException('Invalid OpenAI API key. Check your .env file.');
+      }
+      if (response.statusCode == 429) {
+        throw AiException(
+          'OpenAI rate limit reached. Wait a moment and try again.',
+        );
+      }
+      if (response.statusCode == 402) {
+        throw AiException(
+          'OpenAI credit exhausted. Add credits at platform.openai.com.',
+        );
+      }
+      throw AiException('AI failed (${response.statusCode}): $msg');
     }
   }
+}
 
-  String? _mapLanguage(String code) {
-    switch (code) {
-      case 'si':
-        return 'si'; // Sinhala
-      case 'ta':
-        return 'ta'; // Tamil
-      case 'en':
-        return 'en';
-      default:
-        return null;
-    }
-  }
+// ── Custom Exception ─────────────────────────────────────────────
+class AiException implements Exception {
+  final String message;
+  const AiException(this.message);
 
-  String _languageName(String code) {
-    switch (code) {
-      case 'si':
-        return 'Sinhala';
-      case 'ta':
-        return 'Tamil';
-      default:
-        return 'English';
-    }
-  }
+  @override
+  String toString() => message;
 }
