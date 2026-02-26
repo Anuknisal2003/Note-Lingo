@@ -1,10 +1,15 @@
 // lib/providers/recording_provider.dart
 //
-// Full recording pipeline:
-//   1. record package captures .m4a
-//   2. Timer ticks every second
-//   3. On stop → upload audio → transcribe → summarize → keywords → title
-//   4. Create NoteModel → hand off to NotesProvider
+// Recording pipeline using YOUR LOCAL AI MODEL only.
+// No OpenAI API keys needed.
+//
+// Pipeline:
+//   1. Record audio (.m4a)
+//   2. Upload to Firebase Storage (optional)
+//   3. Transcribe with YOUR Wav2Vec2 model (Flask API)
+//   4. Generate summary locally (no GPT needed)
+//   5. Extract keywords locally
+//   6. Create NoteModel → hand off to NotesProvider
 
 import 'dart:async';
 import 'dart:io';
@@ -14,8 +19,8 @@ import 'package:record/record.dart';
 import 'package:uuid/uuid.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/note_model.dart';
-import '../services/ai_service.dart';
 import '../services/storage_service.dart';
+import '../services/local_ai_service.dart';
 
 enum PipelineStep {
   idle,
@@ -28,17 +33,17 @@ enum PipelineStep {
 }
 
 class RecordingProvider extends ChangeNotifier {
-  // ── Internal ────────────────────────────────────────────────
+  // ── Internal ─────────────────────────────────────────────────
   final AudioRecorder _recorder = AudioRecorder();
-  final AiService _ai = AiService();
   final StorageService _storage = StorageService();
+  final LocalAiService _localAi = LocalAiService();
   final Uuid _uuid = const Uuid();
 
   Timer? _timer;
   String? _audioPath;
   String? _pendingNoteId;
 
-  // ── State ────────────────────────────────────────────────────
+  // ── State ─────────────────────────────────────────────────────
   bool _isRecording = false;
   bool _isPaused = false;
   bool _isProcessing = false;
@@ -49,7 +54,7 @@ class RecordingProvider extends ChangeNotifier {
   NoteModel? _processedNote;
   double _uploadProgress = 0.0;
 
-  // ── Getters ──────────────────────────────────────────────────
+  // ── Getters ───────────────────────────────────────────────────
   bool get isRecording => _isRecording;
   bool get isPaused => _isPaused;
   bool get isProcessing => _isProcessing;
@@ -66,9 +71,9 @@ class RecordingProvider extends ChangeNotifier {
     return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
-  // ════════════════════════════════════════════════════════════
+  // ═══════════════════════════════════════════════════════════════
   //  RECORDING CONTROLS
-  // ════════════════════════════════════════════════════════════
+  // ═══════════════════════════════════════════════════════════════
 
   Future<void> startRecording() async {
     _error = null;
@@ -77,7 +82,6 @@ class RecordingProvider extends ChangeNotifier {
     _seconds = 0;
     _uploadProgress = 0.0;
 
-    // Check microphone permission
     final hasPermission = await _recorder.hasPermission();
     if (!hasPermission) {
       _error = 'Microphone permission denied. Please allow in Settings.';
@@ -85,7 +89,6 @@ class RecordingProvider extends ChangeNotifier {
       return;
     }
 
-    // Create temp file path
     final dir = await getTemporaryDirectory();
     _pendingNoteId = _uuid.v4();
     _audioPath = '${dir.path}/$_pendingNoteId.m4a';
@@ -152,7 +155,7 @@ class RecordingProvider extends ChangeNotifier {
       final uid = FirebaseAuth.instance.currentUser?.uid ?? 'anonymous';
       final dur = _seconds;
 
-      // ── Step 1: Upload audio ──────────────────────────────
+      // ── Step 1: Upload to Firebase Storage (optional) ────────
       _setStatus('Uploading audio…', PipelineStep.uploading);
       String? audioUrl;
       try {
@@ -165,29 +168,49 @@ class RecordingProvider extends ChangeNotifier {
           },
         );
       } catch (e) {
-        // Non-fatal — continue without cloud storage URL
-        debugPrint('Storage upload failed: $e');
+        debugPrint('Storage upload skipped: $e');
       }
 
-      // ── Step 2: Transcribe with Whisper ───────────────────
-      _setStatus('Transcribing your speech…', PipelineStep.transcribing);
-      final transcription = await _ai.transcribe(audioFile, language: language);
+      // ── Step 2: Transcribe with YOUR local model ──────────────
+      _setStatus('Transcribing with your AI model…', PipelineStep.transcribing);
+
+      final serverRunning = await _localAi.isReachable();
+      if (!serverRunning) {
+        throw Exception(
+          'Local AI server is not running!\n\n'
+          'Start it on your PC:\n'
+          '  py -3.11 flask_api/app.py\n\n'
+          'Then make sure your phone and PC\nare on the same WiFi network.',
+        );
+      }
+
+      final result = await _localAi.transcribe(audioFile);
+      final transcription = result.text;
+
+      if (transcription.isEmpty) {
+        throw Exception(
+          'Could not transcribe audio.\n'
+          'Please speak clearly and try again.\n'
+          'Recording more training samples improves accuracy.',
+        );
+      }
+
       _liveTranscript = transcription;
       notifyListeners();
 
-      // ── Step 3: Summarize with GPT-4o ─────────────────────
-      _setStatus('Summarizing with AI…', PipelineStep.summarizing);
-      final summary = await _ai.summarize(transcription, language: language);
+      // ── Step 3: Summary (local, no API) ───────────────────────
+      _setStatus('Generating summary…', PipelineStep.summarizing);
+      final summary = _generateLocalSummary(transcription);
 
-      // ── Step 4: Extract keywords ───────────────────────────
+      // ── Step 4: Keywords (local, no API) ──────────────────────
       _setStatus('Extracting keywords…', PipelineStep.keywords);
-      final keywords = await _ai.extractKeywords(transcription);
+      final keywords = _extractLocalKeywords(transcription);
 
-      // ── Step 5: Generate title ─────────────────────────────
-      _setStatus('Generating title…', PipelineStep.title);
-      final title = await _ai.generateTitle(transcription);
+      // ── Step 5: Title (local, no API) ─────────────────────────
+      _setStatus('Creating title…', PipelineStep.title);
+      final title = _generateLocalTitle(transcription);
 
-      // ── Step 6: Build NoteModel ────────────────────────────
+      // ── Step 6: Build NoteModel ────────────────────────────────
       final wordCount = transcription.trim().split(RegExp(r'\s+')).length;
       final now = DateTime.now();
 
@@ -209,8 +232,6 @@ class RecordingProvider extends ChangeNotifier {
       );
 
       _setStatus('Done!', PipelineStep.done);
-
-      // Clean up temp file
       try {
         await audioFile.delete();
       } catch (_) {}
@@ -221,6 +242,96 @@ class RecordingProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  LOCAL HELPERS — runs on device, zero API calls
+  // ═══════════════════════════════════════════════════════════════
+
+  String _generateLocalSummary(String text) {
+    if (text.isEmpty) return 'No content transcribed.';
+    final sentences = text
+        .split(RegExp(r'(?<=[.!?])\s+'))
+        .where((s) => s.trim().isNotEmpty)
+        .toList();
+    if (sentences.length <= 2) return text;
+    return '${sentences[0]}. ${sentences[1]}.';
+  }
+
+  List<String> _extractLocalKeywords(String text) {
+    if (text.isEmpty) return [];
+    const stopWords = {
+      'the',
+      'a',
+      'an',
+      'and',
+      'or',
+      'but',
+      'in',
+      'on',
+      'at',
+      'to',
+      'for',
+      'of',
+      'with',
+      'by',
+      'from',
+      'is',
+      'are',
+      'was',
+      'were',
+      'be',
+      'been',
+      'have',
+      'has',
+      'had',
+      'do',
+      'does',
+      'did',
+      'will',
+      'would',
+      'could',
+      'should',
+      'this',
+      'that',
+      'it',
+      'we',
+      'you',
+      'i',
+      'he',
+      'she',
+      'they',
+      'not',
+      'so',
+    };
+    final wordCount = <String, int>{};
+    final words = text
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z\s]'), '')
+        .split(RegExp(r'\s+'));
+    for (final word in words) {
+      if (word.length > 3 && !stopWords.contains(word)) {
+        wordCount[word] = (wordCount[word] ?? 0) + 1;
+      }
+    }
+    final sorted = wordCount.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    return sorted.take(5).map((e) => e.key).toList();
+  }
+
+  String _generateLocalTitle(String text) {
+    if (text.isEmpty) return 'New Recording';
+    final words = text.trim().split(RegExp(r'\s+'));
+    final titleWords = words.take(6).map((w) {
+      if (w.isEmpty) return w;
+      return w[0].toUpperCase() + w.substring(1);
+    }).toList();
+    final title = titleWords.join(' ');
+    return words.length > 6 ? '$title…' : title;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  MISC
+  // ═══════════════════════════════════════════════════════════════
 
   void cancelRecording() {
     _timer?.cancel();
@@ -254,7 +365,6 @@ class RecordingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ── Timer ────────────────────────────────────────────────────
   void _startTimer() {
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       _seconds++;
