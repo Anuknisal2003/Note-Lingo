@@ -1,1 +1,47 @@
 file,transcript,duration
+file,transcript,duration
+sample_0000.wav,the lecture today covers the introduction to machine learning,6.13
+sample_0001.wav,neural networks are inspired by the human brain,4.92
+sample_0002.wav,deep learning uses multiple layers to learn representations,6.36
+sample_0003.wav,the training loss decreased significantly after ten epochs,5.42
+sample_0004.wav,gradient descent is used to minimize the loss function,5.67
+sample_0005.wav,overfitting occurs when the model memorizes training data,5.95
+sample_0006.wav,we use dropout layers to prevent overfitting,5.10
+sample_0007.wav,the validation accuracy is eighty five percent,4.64
+sample_0008.wav,convolutional neural networks are used for image classification,7.62
+sample_0009.wav,recurrent neural networks handle sequential data,6.44
+sample_0010.wav,let us schedule a follow up meeting for next week,5.40
+sample_0011.wav,the project deadline is the end of this month,4.72
+sample_0012.wav,we need to review the requirements document,4.30
+sample_0013.wav,please send me the updated report by friday,4.62
+sample_0014.wav,the budget for this quarter has been approved,4.40
+sample_0015.wav,action item assigned to the development team,4.64
+sample_0016.wav,we will present the results to the stakeholders,4.69
+sample_0017.wav,the sprint review is scheduled for thursday afternoon,4.69
+sample_0018.wav,can everyone confirm their availability for the demo,4.09
+sample_0019.wav,the client approved the new design mockups,3.00
+sample_0020.wav,the photosynthesis process converts sunlight to energy,4.91
+sample_0021.wav,water molecules consist of two hydrogen and one oxygen atom,6.80
+sample_0022.wav,the speed of light is approximately three hundred thousand kilometers per second,7.63
+sample_0023.wav,newton's first law states that objects in motion stay in motion,6.92
+sample_0024.wav,the capital of sri lanka is sri jayawardenepura kotte,5.13
+sample_0025.wav,binary search runs in logarithmic time complexity,6.81
+sample_0026.wav,a linked list stores elements in sequential memory nodes,5.22
+sample_0027.wav,the database uses a relational model with foreign keys,5.00
+sample_0028.wav,version control allows teams to collaborate on code,4.90
+sample_0029.wav,application programming interfaces connect different services,4.62
+sample_0030.wav,today's meeting covered three main topics,3.49
+sample_0031.wav,the first point discussed was the budget allocation,5.12
+sample_0032.wav,key action items from this session are as follows,5.72
+sample_0033.wav,this note was recorded on the fourteenth of february,5.13
+sample_0034.wav,please summarize the important points from this lecture,4.74
+sample_0035.wav,the professor mentioned that the exam will cover chapters one through five,6.52
+sample_0036.wav,important keywords from today include algorithm data structure and complexity,6.63
+sample_0037.wav,the interview went well and they will follow up next week,5.32
+sample_0038.wav,personal reminder to review the notes before the exam,5.10
+sample_0039.wav,this recording covers the second half of the lecture,4.71
+sample_0040.wav,the assignment submission date has been extended,4.07
+sample_0041.wav,we discussed the project proposal this morning,4.30
+sample_0042.wav,the research paper needs two more references,3.85
+sample_0043.wav,laboratory practical is scheduled for wednesday,4.42
+sample_0044.wav,the group presentation is worth thirty percent of the grade,4.94
