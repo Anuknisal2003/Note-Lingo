@@ -2,11 +2,22 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/notes_provider.dart';
 import '../../providers/language_provider.dart';
 import '../auth/login_screen.dart';
+
+// ── Palette ────────────────────────────────────────────────────────
+const _bgTop = Color(0xFF88BAF9);
+const _bgMid = Color(0xFFB5D5FC);
+const _bgBot = Color(0xFFF3F7FF);
+const _deep = Color(0xFF2356C8);
+const _primary = Color(0xFF4F8EF7);
+const _textDark = Color(0xFF0E1A3A);
+const _textGrey = Color(0xFF6B7A99);
+const _cardBg = Color(0xFFFFFFFF);
+const _border = Color(0xFFD0DFFF);
+const _error = Color(0xFFE53E3E);
 
 class ProfileScreen extends StatelessWidget {
   final bool embedded;
@@ -26,13 +37,24 @@ class ProfileScreen extends StatelessWidget {
         children: [
           const SizedBox(height: 8),
 
-          // ── Avatar ─────────────────────────────────────
+          // ── Avatar ────────────────────────────────────────
           Container(
             width: 88,
             height: 88,
             decoration: BoxDecoration(
-              gradient: AppColors.primaryGradient,
+              gradient: const LinearGradient(
+                colors: [Color(0xFF6BAAF8), _deep],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: _primary.withOpacity(0.30),
+                  blurRadius: 18,
+                  offset: const Offset(0, 6),
+                ),
+              ],
             ),
             child: Center(
               child: Text(
@@ -40,7 +62,6 @@ class ProfileScreen extends StatelessWidget {
                     ? user!.displayName![0].toUpperCase()
                     : 'U',
                 style: const TextStyle(
-                  fontFamily: 'Plus Jakarta Sans',
                   fontWeight: FontWeight.w800,
                   fontSize: 34,
                   color: Colors.white,
@@ -51,16 +72,21 @@ class ProfileScreen extends StatelessWidget {
           const SizedBox(height: 14),
           Text(
             user?.displayName ?? 'User',
-            style: Theme.of(context).textTheme.headlineLarge,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: _textDark,
+              letterSpacing: -0.5,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             user?.email ?? '',
-            style: Theme.of(context).textTheme.bodyMedium,
+            style: TextStyle(fontSize: 14, color: _textGrey.withOpacity(0.85)),
           ),
           const SizedBox(height: 28),
 
-          // ── Stats ──────────────────────────────────────
+          // ── Stats ──────────────────────────────────────────
           Row(
             children: [
               _StatCard(
@@ -84,12 +110,12 @@ class ProfileScreen extends StatelessWidget {
           ),
           const SizedBox(height: 28),
 
-          // ── Language ───────────────────────────────────
+          // ── Language ───────────────────────────────────────
           _Section(title: 'Recording Language'),
           _LanguageSelector(lang: lang),
           const SizedBox(height: 20),
 
-          // ── Account ─────────────────────────────────────
+          // ── Account ─────────────────────────────────────────
           _Section(title: 'Account'),
           _Tile(
             icon: Icons.person_outline_rounded,
@@ -104,18 +130,26 @@ class ProfileScreen extends StatelessWidget {
           _Tile(
             icon: Icons.notifications_outlined,
             label: 'Notifications',
-            trailing: Switch(value: true, onChanged: (_) {}),
+            trailing: Switch(
+              value: true,
+              onChanged: (_) {},
+              activeColor: _primary,
+              activeTrackColor: _primary.withOpacity(0.28),
+            ),
           ),
           const SizedBox(height: 20),
 
-          // ── About ──────────────────────────────────────
+          // ── About ──────────────────────────────────────────
           _Section(title: 'About'),
           _Tile(
             icon: Icons.info_outline_rounded,
             label: 'App Version',
             trailing: Text(
               '1.0.0',
-              style: Theme.of(context).textTheme.bodyMedium,
+              style: TextStyle(
+                fontSize: 13,
+                color: _textGrey.withOpacity(0.85),
+              ),
             ),
           ),
           _Tile(
@@ -125,30 +159,44 @@ class ProfileScreen extends StatelessWidget {
           ),
           const SizedBox(height: 28),
 
-          // ── Sign Out ────────────────────────────────────
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () async {
-                await auth.signOut();
-                if (!context.mounted) return;
-                Navigator.of(context).pushAndRemoveUntil(
-                  PageRouteBuilder(
-                    pageBuilder: (_, _, _) => const LoginScreen(),
-                    transitionsBuilder: (_, anim, _, child) =>
-                        FadeTransition(opacity: anim, child: child),
-                    transitionDuration: const Duration(milliseconds: 400),
-                  ),
-                  (_) => false,
-                );
-              },
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: AppColors.error),
-                foregroundColor: AppColors.error,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+          // ── Sign Out ────────────────────────────────────────
+          GestureDetector(
+            onTap: () async {
+              await auth.signOut();
+              if (!context.mounted) return;
+              Navigator.of(context).pushAndRemoveUntil(
+                PageRouteBuilder(
+                  pageBuilder: (_, _, _) => const LoginScreen(),
+                  transitionsBuilder: (_, anim, _, child) =>
+                      FadeTransition(opacity: anim, child: child),
+                  transitionDuration: const Duration(milliseconds: 400),
+                ),
+                (_) => false,
+              );
+            },
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 15),
+              decoration: BoxDecoration(
+                color: _cardBg.withOpacity(0.72),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: _error.withOpacity(0.50)),
               ),
-              icon: const Icon(Icons.logout_rounded, size: 18),
-              label: const Text('Sign Out'),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.logout_rounded, color: _error, size: 18),
+                  SizedBox(width: 8),
+                  Text(
+                    'Sign Out',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: _error,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 32),
@@ -157,28 +205,62 @@ class ProfileScreen extends StatelessWidget {
     );
 
     if (embedded) {
-      return SafeArea(child: body);
+      return Container(
+        color: _bgBot,
+        child: SafeArea(child: body),
+      );
     }
+
     return Scaffold(
-      backgroundColor: AppColors.bgDark,
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text('Profile'),
+      body: Stack(
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [_bgTop, _bgMid, _bgBot],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                stops: [0.0, 0.32, 1.0],
+              ),
+            ),
+          ),
+          SafeArea(
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Row(
+                    children: [
+                      _CircleBack(onTap: () => Navigator.pop(context)),
+                      const SizedBox(width: 12),
+                      const Text(
+                        'Profile',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          color: _textDark,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(child: body),
+              ],
+            ),
+          ),
+        ],
       ),
-      body: body,
     );
   }
 }
 
-// ── Stat Card ─────────────────────────────────────────────────────
+// ── Stat Card ──────────────────────────────────────────────────────
 
 class _StatCard extends StatelessWidget {
-  final String emoji;
-  final String value;
-  final String label;
+  final String emoji, value, label;
   const _StatCard({
     required this.emoji,
     required this.value,
@@ -186,47 +268,68 @@ class _StatCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: AppColors.bgCard,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.bgBorder),
-        ),
-        child: Column(
-          children: [
-            Text(emoji, style: const TextStyle(fontSize: 22)),
-            const SizedBox(height: 6),
-            Text(value, style: Theme.of(context).textTheme.headlineSmall),
-            Text(label, style: Theme.of(context).textTheme.bodySmall),
-          ],
-        ),
+  Widget build(BuildContext context) => Expanded(
+    child: Container(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      decoration: BoxDecoration(
+        color: _cardBg.withOpacity(0.72),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _border),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF4A7CF5).withOpacity(0.07),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
-    );
-  }
+      child: Column(
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 22)),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              color: _textDark,
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(fontSize: 11, color: _textGrey.withOpacity(0.80)),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
-// ── Section Header ────────────────────────────────────────────────
+// ── Section Header ─────────────────────────────────────────────────
 
 class _Section extends StatelessWidget {
   final String title;
   const _Section({required this.title});
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Text(title, style: Theme.of(context).textTheme.headlineSmall),
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          color: _textGrey,
+          letterSpacing: 0.3,
+        ),
       ),
-    );
-  }
+    ),
+  );
 }
 
-// ── Settings Tile ─────────────────────────────────────────────────
+// ── Settings Tile ──────────────────────────────────────────────────
 
 class _Tile extends StatelessWidget {
   final IconData icon;
@@ -241,43 +344,56 @@ class _Tile extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        onTap: onTap,
-        tileColor: AppColors.bgCard,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(color: AppColors.bgBorder),
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.only(bottom: 8),
+    decoration: BoxDecoration(
+      color: _cardBg.withOpacity(0.72),
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: _border),
+      boxShadow: [
+        BoxShadow(
+          color: const Color(0xFF4A7CF5).withOpacity(0.05),
+          blurRadius: 8,
+          offset: const Offset(0, 3),
         ),
-        leading: Container(
-          width: 34,
-          height: 34,
-          decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, color: AppColors.primaryLight, size: 17),
+      ],
+    ),
+    child: ListTile(
+      onTap: onTap,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      leading: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          color: _primary.withOpacity(0.10),
+          borderRadius: BorderRadius.circular(8),
         ),
-        title: Text(label, style: Theme.of(context).textTheme.bodyLarge),
-        trailing:
-            trailing ??
-            (onTap != null
-                ? const Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    size: 14,
-                    color: AppColors.textMuted,
-                  )
-                : null),
-        dense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        child: Icon(icon, color: _primary, size: 17),
       ),
-    );
-  }
+      title: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 14,
+          color: _textDark,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      trailing:
+          trailing ??
+          (onTap != null
+              ? const Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 14,
+                  color: _textGrey,
+                )
+              : null),
+      dense: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+    ),
+  );
 }
 
-// ── Language Selector ─────────────────────────────────────────────
+// ── Language Selector ──────────────────────────────────────────────
 
 class _LanguageSelector extends StatelessWidget {
   final LanguageProvider lang;
@@ -285,7 +401,7 @@ class _LanguageSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = [
+    const items = [
       ('en', '🇬🇧', 'English'),
       ('si', '🇱🇰', 'Sinhala'),
       ('ta', '🇱🇰', 'Tamil'),
@@ -293,9 +409,16 @@ class _LanguageSelector extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.bgCard,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.bgBorder),
+        color: _cardBg.withOpacity(0.72),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _border),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF4A7CF5).withOpacity(0.07),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         children: items.map((item) {
@@ -308,26 +431,44 @@ class _LanguageSelector extends StatelessWidget {
               margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
-                color: sel
-                    ? AppColors.primary.withOpacity(0.12)
-                    : Colors.transparent,
+                gradient: sel
+                    ? const LinearGradient(
+                        colors: [Color(0xFF6BAAF8), _deep],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
+                    : null,
+                color: sel ? null : Colors.transparent,
                 borderRadius: BorderRadius.circular(10),
-                border: sel
-                    ? Border.all(color: AppColors.primary.withOpacity(0.4))
+                boxShadow: sel
+                    ? [
+                        BoxShadow(
+                          color: _primary.withOpacity(0.25),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ]
                     : null,
               ),
               child: Row(
                 children: [
                   Text(flag, style: const TextStyle(fontSize: 22)),
                   const SizedBox(width: 14),
-                  Text(name, style: Theme.of(context).textTheme.bodyLarge),
+                  Text(
+                    name,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: sel ? Colors.white : _textDark,
+                    ),
+                  ),
                   const Spacer(),
                   if (sel)
                     Container(
                       width: 22,
                       height: 22,
                       decoration: const BoxDecoration(
-                        color: AppColors.primary,
+                        color: Colors.white24,
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
@@ -344,4 +485,30 @@ class _LanguageSelector extends StatelessWidget {
       ),
     );
   }
+}
+
+// ── Circle back ────────────────────────────────────────────────────
+
+class _CircleBack extends StatelessWidget {
+  final VoidCallback onTap;
+  const _CircleBack({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.70),
+        shape: BoxShape.circle,
+        border: Border.all(color: _border, width: 1.2),
+      ),
+      child: const Icon(
+        Icons.arrow_back_ios_new_rounded,
+        size: 16,
+        color: _textDark,
+      ),
+    ),
+  );
 }
