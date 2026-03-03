@@ -1,5 +1,3 @@
-// lib/services/storage_service.dart
-//
 // Firebase Storage operations:
 //  - Upload audio recordings
 //  - Delete audio files
