@@ -1,10 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/theme/app_theme.dart';
 import '../../models/note_model.dart';
 import '../../providers/recording_provider.dart';
 import '../../providers/language_provider.dart';
 import '../note_detail/note_detail_screen.dart';
+
+// ── Palette ────────────────────────────────────────────────────────
+const _bgTop = Color(0xFF6AABF8);
+const _bgMid = Color(0xFF9AC8FB);
+const _bgBot = Color(0xFFEFF5FF);
+const _deep = Color(0xFF2356C8);
+const _primary = Color(0xFF4F8EF7);
+const _textDark = Color(0xFF0E1A3A);
+const _textGrey = Color(0xFF6B7A99);
+const _cardBg = Color(0xFFFFFFFF);
+const _border = Color(0xFFD0DFFF);
+const _error = Color(0xFFE53E3E);
+const _warning = Color(0xFFF59E0B);
 
 class RecordingScreen extends StatefulWidget {
   const RecordingScreen({super.key});
@@ -41,7 +53,6 @@ class _RecordingScreenState extends State<RecordingScreen>
     super.dispose();
   }
 
-  // ── Stop + navigate ──────────────────────────────────────────
   Future<void> _onStop(RecordingProvider rp, String language) async {
     await rp.stopRecording(category: _category, language: language);
     if (!mounted) return;
@@ -51,12 +62,21 @@ class _RecordingScreenState extends State<RecordingScreen>
         SnackBar(
           content: Row(
             children: [
-              const Icon(Icons.error_outline, color: AppColors.error, size: 18),
+              const Icon(Icons.error_outline, color: _error, size: 18),
               const SizedBox(width: 8),
-              Expanded(child: Text(rp.error!)),
+              Expanded(
+                child: Text(
+                  rp.error!,
+                  style: const TextStyle(color: _textDark),
+                ),
+              ),
             ],
           ),
-          backgroundColor: AppColors.bgSurface,
+          backgroundColor: _cardBg,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           duration: const Duration(seconds: 5),
         ),
       );
@@ -67,8 +87,6 @@ class _RecordingScreenState extends State<RecordingScreen>
     if (rp.processedNote != null) {
       final note = rp.processedNote!;
       rp.clearProcessed();
-
-      // Save note via NotesProvider then navigate
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
@@ -83,24 +101,30 @@ class _RecordingScreenState extends State<RecordingScreen>
     final result = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Discard Recording?'),
+        backgroundColor: _cardBg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Text(
+          'Discard Recording?',
+          style: TextStyle(color: _textDark, fontWeight: FontWeight.w700),
+        ),
         content: const Text(
           'Your current recording will be lost. This cannot be undone.',
+          style: TextStyle(color: _textGrey),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Keep Recording'),
+            child: const Text(
+              'Keep Recording',
+              style: TextStyle(color: _primary),
+            ),
           ),
           TextButton(
             onPressed: () {
               rp.cancelRecording();
               Navigator.pop(context, true);
             },
-            child: const Text(
-              'Discard',
-              style: TextStyle(color: AppColors.error),
-            ),
+            child: const Text('Discard', style: TextStyle(color: _error)),
           ),
         ],
       ),
@@ -122,111 +146,150 @@ class _RecordingScreenState extends State<RecordingScreen>
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.bgDark,
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.close_rounded),
-            onPressed: () async {
-              final ok = await _confirmDiscard(rp);
-              if (ok && mounted) Navigator.pop(context);
-            },
-          ),
-          title: const Text('New Recording'),
-          actions: [
-            _LanguagePill(
-              value: lang.selectedLanguage,
-              onChanged: (v) => lang.setLanguage(v),
-            ),
-            const SizedBox(width: 12),
-          ],
-        ),
-        body: Column(
+        body: Stack(
           children: [
-            Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 24),
-
-                    // ── Visualizer ──────────────────────────
-                    _RecordVisualizer(
-                      isRecording: rp.isRecording,
-                      isPaused: rp.isPaused,
-                      isProcessing: rp.isProcessing,
-                      pulseAnim: _pulseAnim,
-                    ),
-                    const SizedBox(height: 24),
-
-                    // ── Timer ───────────────────────────────
-                    Text(
-                      rp.formattedTime,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.displayLarge?.copyWith(letterSpacing: 4),
-                    ),
-                    const SizedBox(height: 8),
-
-                    // ── Status ──────────────────────────────
-                    _StatusLabel(
-                      isRecording: rp.isRecording,
-                      isPaused: rp.isPaused,
-                      isProcessing: rp.isProcessing,
-                      processingStatus: rp.processingStatus,
-                    ),
-
-                    // ── Upload progress ─────────────────────
-                    if (rp.isProcessing &&
-                        rp.uploadProgress > 0 &&
-                        rp.uploadProgress < 1) ...[
-                      const SizedBox(height: 12),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: rp.uploadProgress,
-                          backgroundColor: AppColors.bgBorder,
-                          color: AppColors.primary,
-                          minHeight: 3,
-                        ),
-                      ),
-                    ],
-
-                    const SizedBox(height: 28),
-
-                    // ── Category (only when idle) ───────────
-                    if (!rp.isRecording &&
-                        !rp.isPaused &&
-                        !rp.isProcessing) ...[
-                      _CategorySelector(
-                        selected: _category,
-                        onChanged: (c) => setState(() => _category = c),
-                      ),
-                      const SizedBox(height: 28),
-                    ],
-
-                    // ── Live transcript ─────────────────────
-                    if (rp.liveTranscript.isNotEmpty) ...[
-                      _LiveTranscript(text: rp.liveTranscript),
-                      const SizedBox(height: 24),
-                    ] else if (rp.isRecording) ...[
-                      _LiveTranscript(text: ''),
-                      const SizedBox(height: 24),
-                    ],
-                  ],
+            // gradient background
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [_bgTop, _bgMid, _bgBot],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: [0.0, 0.35, 1.0],
                 ),
               ),
             ),
 
-            // ── Controls ────────────────────────────────────
-            _Controls(
-              isRecording: rp.isRecording,
-              isPaused: rp.isPaused,
-              isProcessing: rp.isProcessing,
-              onStart: () => rp.startRecording(),
-              onPause: () => rp.pauseRecording(),
-              onResume: () => rp.resumeRecording(),
-              onStop: () => _onStop(rp, lang.selectedLanguage),
+            SafeArea(
+              child: Column(
+                children: [
+                  // ── Custom app bar ──────────────────────────
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            Icons.close_rounded,
+                            color: _textDark,
+                          ),
+                          onPressed: () async {
+                            final ok = await _confirmDiscard(rp);
+                            if (ok && mounted) Navigator.pop(context);
+                          },
+                        ),
+                        const Expanded(
+                          child: Text(
+                            'New Recording',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: _textDark,
+                            ),
+                          ),
+                        ),
+                        _LanguagePill(
+                          value: lang.selectedLanguage,
+                          onChanged: (v) => lang.setLanguage(v),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                    ),
+                  ),
+
+                  Expanded(
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 24),
+
+                          // visualizer
+                          _RecordVisualizer(
+                            isRecording: rp.isRecording,
+                            isPaused: rp.isPaused,
+                            isProcessing: rp.isProcessing,
+                            pulseAnim: _pulseAnim,
+                          ),
+                          const SizedBox(height: 24),
+
+                          // timer
+                          Text(
+                            rp.formattedTime,
+                            style: const TextStyle(
+                              fontSize: 48,
+                              fontWeight: FontWeight.w800,
+                              color: _textDark,
+                              letterSpacing: 4,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+
+                          // status
+                          _StatusLabel(
+                            isRecording: rp.isRecording,
+                            isPaused: rp.isPaused,
+                            isProcessing: rp.isProcessing,
+                            processingStatus: rp.processingStatus,
+                          ),
+
+                          // upload progress
+                          if (rp.isProcessing &&
+                              rp.uploadProgress > 0 &&
+                              rp.uploadProgress < 1) ...[
+                            const SizedBox(height: 12),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                value: rp.uploadProgress,
+                                backgroundColor: _border,
+                                color: _primary,
+                                minHeight: 3,
+                              ),
+                            ),
+                          ],
+
+                          const SizedBox(height: 28),
+
+                          // category selector
+                          if (!rp.isRecording &&
+                              !rp.isPaused &&
+                              !rp.isProcessing) ...[
+                            _CategorySelector(
+                              selected: _category,
+                              onChanged: (c) => setState(() => _category = c),
+                            ),
+                            const SizedBox(height: 28),
+                          ],
+
+                          // live transcript
+                          if (rp.liveTranscript.isNotEmpty ||
+                              rp.isRecording) ...[
+                            _LiveTranscript(text: rp.liveTranscript),
+                            const SizedBox(height: 24),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // controls
+                  _Controls(
+                    isRecording: rp.isRecording,
+                    isPaused: rp.isPaused,
+                    isProcessing: rp.isProcessing,
+                    onStart: () => rp.startRecording(),
+                    onPause: () => rp.pauseRecording(),
+                    onResume: () => rp.resumeRecording(),
+                    onStop: () => _onStop(rp, lang.selectedLanguage),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -238,9 +301,7 @@ class _RecordingScreenState extends State<RecordingScreen>
 // ── Visualizer ────────────────────────────────────────────────────
 
 class _RecordVisualizer extends StatelessWidget {
-  final bool isRecording;
-  final bool isPaused;
-  final bool isProcessing;
+  final bool isRecording, isPaused, isProcessing;
   final Animation<double> pulseAnim;
 
   const _RecordVisualizer({
@@ -251,92 +312,91 @@ class _RecordVisualizer extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 200,
-      height: 200,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          if (isRecording && !isPaused) ...[
-            AnimatedBuilder(
-              animation: pulseAnim,
-              builder: (_, __) => Container(
-                width: 160 + pulseAnim.value * 36,
-                height: 160 + pulseAnim.value * 36,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: AppColors.error.withOpacity(
-                      0.25 * (1 - pulseAnim.value),
-                    ),
-                    width: 2,
-                  ),
+  Widget build(BuildContext context) => SizedBox(
+    width: 200,
+    height: 200,
+    child: Stack(
+      alignment: Alignment.center,
+      children: [
+        if (isRecording && !isPaused) ...[
+          AnimatedBuilder(
+            animation: pulseAnim,
+            builder: (_, __) => Container(
+              width: 160 + pulseAnim.value * 36,
+              height: 160 + pulseAnim.value * 36,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: _error.withOpacity(0.22 * (1 - pulseAnim.value)),
+                  width: 2,
                 ),
               ),
             ),
-            AnimatedBuilder(
-              animation: pulseAnim,
-              builder: (_, __) => Container(
-                width: 130 + pulseAnim.value * 20,
-                height: 130 + pulseAnim.value * 20,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.error.withOpacity(
-                    0.06 + pulseAnim.value * 0.04,
-                  ),
-                ),
+          ),
+          AnimatedBuilder(
+            animation: pulseAnim,
+            builder: (_, __) => Container(
+              width: 130 + pulseAnim.value * 20,
+              height: 130 + pulseAnim.value * 20,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _error.withOpacity(0.05 + pulseAnim.value * 0.04),
               ),
-            ),
-          ],
-          if (isProcessing)
-            SizedBox(
-              width: 140,
-              height: 140,
-              child: CircularProgressIndicator(
-                color: AppColors.primary.withOpacity(0.3),
-                strokeWidth: 2,
-              ),
-            ),
-          Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              gradient: isRecording
-                  ? AppColors.recordGradient
-                  : AppColors.primaryGradient,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: (isRecording ? AppColors.error : AppColors.primary)
-                      .withOpacity(0.4),
-                  blurRadius: 28,
-                  spreadRadius: 4,
-                ),
-              ],
-            ),
-            child: Icon(
-              isProcessing
-                  ? Icons.auto_awesome_rounded
-                  : isRecording
-                  ? (isPaused ? Icons.pause_rounded : Icons.mic_rounded)
-                  : Icons.mic_rounded,
-              color: Colors.white,
-              size: 44,
             ),
           ),
         ],
-      ),
-    );
-  }
+        if (isProcessing)
+          SizedBox(
+            width: 140,
+            height: 140,
+            child: CircularProgressIndicator(
+              color: _primary.withOpacity(0.30),
+              strokeWidth: 2,
+            ),
+          ),
+        Container(
+          width: 100,
+          height: 100,
+          decoration: BoxDecoration(
+            gradient: isRecording
+                ? const LinearGradient(
+                    colors: [Color(0xFFFF5370), Color(0xFFFF2D55)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : const LinearGradient(
+                    colors: [Color(0xFF6BAAF8), _deep],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: (isRecording ? _error : _primary).withOpacity(0.38),
+                blurRadius: 28,
+                spreadRadius: 4,
+              ),
+            ],
+          ),
+          child: Icon(
+            isProcessing
+                ? Icons.auto_awesome_rounded
+                : isRecording
+                ? (isPaused ? Icons.pause_rounded : Icons.mic_rounded)
+                : Icons.mic_rounded,
+            color: Colors.white,
+            size: 44,
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
-// ── Status Label ─────────────────────────────────────────────────
+// ── Status Label ──────────────────────────────────────────────────
 
 class _StatusLabel extends StatelessWidget {
-  final bool isRecording;
-  final bool isPaused;
-  final bool isProcessing;
+  final bool isRecording, isPaused, isProcessing;
   final String processingStatus;
 
   const _StatusLabel({
@@ -350,19 +410,18 @@ class _StatusLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     String label;
     Color color;
-
     if (isProcessing) {
       label = processingStatus.isNotEmpty ? processingStatus : 'Processing…';
-      color = AppColors.primary;
+      color = _primary;
     } else if (isPaused) {
       label = '⏸  Paused — tap Resume to continue';
-      color = AppColors.warning;
+      color = _warning;
     } else if (isRecording) {
       label = '● Recording — speak clearly';
-      color = AppColors.error;
+      color = _error;
     } else {
       label = 'Tap Start to begin recording';
-      color = AppColors.textMuted;
+      color = _textGrey;
     }
 
     return AnimatedSwitcher(
@@ -370,7 +429,11 @@ class _StatusLabel extends StatelessWidget {
       child: Text(
         label,
         key: ValueKey(label),
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: color),
+        style: TextStyle(
+          fontSize: 14,
+          color: color,
+          fontWeight: FontWeight.w500,
+        ),
         textAlign: TextAlign.center,
       ),
     );
@@ -382,7 +445,6 @@ class _StatusLabel extends StatelessWidget {
 class _CategorySelector extends StatelessWidget {
   final NoteCategory selected;
   final ValueChanged<NoteCategory> onChanged;
-
   const _CategorySelector({required this.selected, required this.onChanged});
 
   static const _cats = [
@@ -393,62 +455,77 @@ class _CategorySelector extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Note Category', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 46,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: _cats.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
-            itemBuilder: (_, i) {
-              final (cat, emoji, label) = _cats[i];
-              final active = selected == cat;
-              return GestureDetector(
-                onTap: () => onChanged(cat),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: active ? AppColors.primaryGradient : null,
-                    color: active ? null : AppColors.bgCard,
-                    borderRadius: BorderRadius.circular(23),
-                    border: Border.all(
-                      color: active ? AppColors.primary : AppColors.bgBorder,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Text(emoji, style: const TextStyle(fontSize: 16)),
-                      const SizedBox(width: 6),
-                      Text(
-                        label,
-                        style: TextStyle(
-                          fontFamily: 'Plus Jakarta Sans',
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: active
-                              ? Colors.white
-                              : AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text(
+        'Note Category',
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+          color: _textDark,
         ),
-      ],
-    );
-  }
+      ),
+      const SizedBox(height: 12),
+      SizedBox(
+        height: 46,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: _cats.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 8),
+          itemBuilder: (_, i) {
+            final (cat, emoji, label) = _cats[i];
+            final active = selected == cat;
+            return GestureDetector(
+              onTap: () => onChanged(cat),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  gradient: active
+                      ? const LinearGradient(
+                          colors: [Color(0xFF6BAAF8), _deep],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        )
+                      : null,
+                  color: active ? null : _cardBg.withOpacity(0.72),
+                  borderRadius: BorderRadius.circular(23),
+                  border: Border.all(color: active ? _primary : _border),
+                  boxShadow: active
+                      ? [
+                          BoxShadow(
+                            color: _primary.withOpacity(0.28),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Row(
+                  children: [
+                    Text(emoji, style: const TextStyle(fontSize: 16)),
+                    const SizedBox(width: 6),
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: active ? Colors.white : _textGrey,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    ],
+  );
 }
 
 // ── Live Transcript ───────────────────────────────────────────────
@@ -458,68 +535,71 @@ class _LiveTranscript extends StatelessWidget {
   const _LiveTranscript({required this.text});
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      constraints: const BoxConstraints(maxHeight: 160),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.bgCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.bgBorder),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: const BoxDecoration(
-                  color: AppColors.error,
-                  shape: BoxShape.circle,
-                ),
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    constraints: const BoxConstraints(maxHeight: 160),
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: _cardBg.withOpacity(0.80),
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: _border),
+      boxShadow: [
+        BoxShadow(
+          color: const Color(0xFF4A7CF5).withOpacity(0.07),
+          blurRadius: 12,
+          offset: const Offset(0, 4),
+        ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: const BoxDecoration(
+                color: _error,
+                shape: BoxShape.circle,
               ),
-              const SizedBox(width: 8),
-              Text(
-                'Live Transcript',
-                style: Theme.of(context).textTheme.labelMedium,
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'Live Transcript',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: _textGrey,
               ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Flexible(
-            child: SingleChildScrollView(
-              child: Text(
-                text.isEmpty ? 'Listening…' : text,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: text.isEmpty
-                      ? AppColors.textMuted
-                      : AppColors.textPrimary,
-                  fontStyle: text.isEmpty ? FontStyle.italic : null,
-                  height: 1.6,
-                ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Flexible(
+          child: SingleChildScrollView(
+            child: Text(
+              text.isEmpty ? 'Listening…' : text,
+              style: TextStyle(
+                fontSize: 14,
+                color: text.isEmpty ? _textGrey : _textDark,
+                fontStyle: text.isEmpty ? FontStyle.italic : null,
+                height: 1.6,
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
 }
 
 // ── Controls ──────────────────────────────────────────────────────
 
 class _Controls extends StatelessWidget {
-  final bool isRecording;
-  final bool isPaused;
-  final bool isProcessing;
-  final VoidCallback onStart;
-  final VoidCallback onPause;
-  final VoidCallback onResume;
-  final VoidCallback onStop;
+  final bool isRecording, isPaused, isProcessing;
+  final VoidCallback onStart, onPause, onResume, onStop;
 
   const _Controls({
     required this.isRecording,
@@ -532,73 +612,87 @@ class _Controls extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.fromLTRB(
-        32,
-        20,
-        32,
-        MediaQuery.of(context).padding.bottom + 28,
-      ),
-      decoration: const BoxDecoration(
-        color: AppColors.bgCard,
-        border: Border(top: BorderSide(color: AppColors.bgBorder)),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          if (!isRecording && !isPaused && !isProcessing)
-            _CtrlBtn(
-              gradient: AppColors.primaryGradient,
-              glowColor: AppColors.primary,
-              icon: Icons.mic_rounded,
-              size: 72,
-              label: 'Start',
-              onTap: onStart,
-            )
-          else if (isProcessing)
-            _CtrlBtn(
-              gradient: AppColors.primaryGradient,
-              glowColor: AppColors.primary,
-              icon: Icons.auto_awesome_rounded,
-              size: 72,
-              label: 'AI Processing…',
-              onTap: null,
-            )
-          else ...[
-            _CtrlBtn(
-              color: AppColors.bgSurface,
-              borderColor: AppColors.bgBorder,
-              icon: isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
-              iconColor: AppColors.textPrimary,
-              size: 56,
-              label: isPaused ? 'Resume' : 'Pause',
-              onTap: isPaused ? onResume : onPause,
+  Widget build(BuildContext context) => Container(
+    padding: EdgeInsets.fromLTRB(
+      32,
+      20,
+      32,
+      MediaQuery.of(context).padding.bottom + 28,
+    ),
+    decoration: BoxDecoration(
+      color: Colors.white.withOpacity(0.88),
+      border: Border(top: BorderSide(color: _border, width: 1)),
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      boxShadow: [
+        BoxShadow(
+          color: const Color(0xFF4A7CF5).withOpacity(0.08),
+          blurRadius: 12,
+          offset: const Offset(0, -3),
+        ),
+      ],
+    ),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (!isRecording && !isPaused && !isProcessing)
+          _CtrlBtn(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF6BAAF8), _deep],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            const SizedBox(width: 24),
-            _CtrlBtn(
-              gradient: AppColors.recordGradient,
-              glowColor: AppColors.error,
-              icon: Icons.stop_rounded,
-              size: 72,
-              label: 'Done',
-              onTap: onStop,
+            glowColor: _primary,
+            icon: Icons.mic_rounded,
+            size: 72,
+            label: 'Start',
+            onTap: onStart,
+          )
+        else if (isProcessing)
+          _CtrlBtn(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF6BAAF8), _deep],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-          ],
+            glowColor: _primary,
+            icon: Icons.auto_awesome_rounded,
+            size: 72,
+            label: 'AI Processing…',
+            onTap: null,
+          )
+        else ...[
+          _CtrlBtn(
+            color: const Color(0xFFF0F5FF),
+            borderColor: _border,
+            icon: isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+            iconColor: _textDark,
+            size: 56,
+            label: isPaused ? 'Resume' : 'Pause',
+            onTap: isPaused ? onResume : onPause,
+          ),
+          const SizedBox(width: 24),
+          _CtrlBtn(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFFF5370), Color(0xFFFF2D55)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            glowColor: _error,
+            icon: Icons.stop_rounded,
+            size: 72,
+            label: 'Done',
+            onTap: onStop,
+          ),
         ],
-      ),
-    );
-  }
+      ],
+    ),
+  );
 }
 
 class _CtrlBtn extends StatelessWidget {
   final LinearGradient? gradient;
-  final Color? color;
-  final Color? borderColor;
-  final Color? glowColor;
+  final Color? color, borderColor, glowColor, iconColor;
   final IconData icon;
-  final Color? iconColor;
   final double size;
   final String label;
   final VoidCallback? onTap;
@@ -616,49 +710,49 @@ class _CtrlBtn extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-              gradient: gradient,
-              color: color,
-              shape: BoxShape.circle,
-              border: borderColor != null
-                  ? Border.all(color: borderColor!, width: 1.5)
-                  : null,
-              boxShadow: glowColor != null
-                  ? [
-                      BoxShadow(
-                        color: glowColor!.withOpacity(0.35),
-                        blurRadius: 20,
-                        spreadRadius: 2,
-                        offset: const Offset(0, 6),
-                      ),
-                    ]
-                  : null,
-            ),
-            child: Icon(
-              icon,
-              color: iconColor ?? Colors.white,
-              size: size * 0.44,
-            ),
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: Column(
+      children: [
+        Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            gradient: gradient,
+            color: color,
+            shape: BoxShape.circle,
+            border: borderColor != null
+                ? Border.all(color: borderColor!, width: 1.5)
+                : null,
+            boxShadow: glowColor != null
+                ? [
+                    BoxShadow(
+                      color: glowColor!.withOpacity(0.32),
+                      blurRadius: 20,
+                      spreadRadius: 2,
+                      offset: const Offset(0, 6),
+                    ),
+                  ]
+                : null,
           ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: Theme.of(
-              context,
-            ).textTheme.labelMedium?.copyWith(color: AppColors.textSecondary),
+          child: Icon(
+            icon,
+            color: iconColor ?? Colors.white,
+            size: size * 0.44,
           ),
-        ],
-      ),
-    );
-  }
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: _textGrey.withOpacity(0.85),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 // ── Language Pill ─────────────────────────────────────────────────
@@ -669,59 +763,55 @@ class _LanguagePill extends StatelessWidget {
   const _LanguagePill({required this.value, required this.onChanged});
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => showModalBottomSheet(
-        context: context,
-        backgroundColor: AppColors.bgCard,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        builder: (_) => _LanguageSheet(
-          current: value,
-          onSelect: (v) {
-            onChanged(v);
-            Navigator.pop(context);
-          },
-        ),
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: () => showModalBottomSheet(
+      context: context,
+      backgroundColor: _cardBg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: AppColors.bgCard,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppColors.bgBorder),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(_flag(value), style: const TextStyle(fontSize: 16)),
-            const SizedBox(width: 6),
-            Text(
-              value.toUpperCase(),
-              style: const TextStyle(
-                fontFamily: 'Plus Jakarta Sans',
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(width: 4),
-            const Icon(
-              Icons.keyboard_arrow_down_rounded,
-              size: 16,
-              color: AppColors.textMuted,
-            ),
-          ],
-        ),
+      builder: (_) => _LanguageSheet(
+        current: value,
+        onSelect: (v) {
+          onChanged(v);
+          Navigator.pop(context);
+        },
       ),
-    );
-  }
+    ),
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.72),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: _border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(_flag(value), style: const TextStyle(fontSize: 16)),
+          const SizedBox(width: 6),
+          Text(
+            value.toUpperCase(),
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: _textDark,
+            ),
+          ),
+          const SizedBox(width: 4),
+          const Icon(
+            Icons.keyboard_arrow_down_rounded,
+            size: 16,
+            color: _textGrey,
+          ),
+        ],
+      ),
+    ),
+  );
 
   String _flag(String code) {
     switch (code) {
       case 'si':
-        return '🇱🇰';
       case 'ta':
         return '🇱🇰';
       default:
@@ -748,9 +838,13 @@ class _LanguageSheet extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          const Text(
             'Select Language',
-            style: Theme.of(context).textTheme.headlineSmall,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: _textDark,
+            ),
           ),
           const SizedBox(height: 16),
           ...langs.map((l) {
@@ -765,24 +859,27 @@ class _LanguageSheet extends StatelessWidget {
                   vertical: 14,
                 ),
                 decoration: BoxDecoration(
-                  color: sel
-                      ? AppColors.primary.withOpacity(0.12)
-                      : AppColors.bgSurface,
+                  color: sel ? _primary.withOpacity(0.10) : Colors.white,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: sel ? AppColors.primary : AppColors.bgBorder,
-                  ),
+                  border: Border.all(color: sel ? _primary : _border),
                 ),
                 child: Row(
                   children: [
                     Text(flag, style: const TextStyle(fontSize: 22)),
                     const SizedBox(width: 12),
-                    Text(name, style: Theme.of(context).textTheme.titleMedium),
+                    Text(
+                      name,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: sel ? _primary : _textDark,
+                      ),
+                    ),
                     const Spacer(),
                     if (sel)
                       const Icon(
                         Icons.check_circle_rounded,
-                        color: AppColors.primary,
+                        color: _primary,
                         size: 20,
                       ),
                   ],
