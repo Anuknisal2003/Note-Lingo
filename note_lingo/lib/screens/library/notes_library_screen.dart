@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/theme/app_theme.dart';
 import '../../models/note_model.dart';
 import '../../providers/notes_provider.dart';
 import '../../widgets/note_card.dart';
 
+// ── Palette ────────────────────────────────────────────────────────
+const _bgTop = Color(0xFF78B1F8);
+const _bgMid = Color(0xFFAACDF9);
+const _bgBot = Color(0xFFEEF4FF);
+const _deep = Color(0xFF2356C8);
+const _primary = Color(0xFF4F8EF7);
+const _textDark = Color(0xFF0E1A3A);
+const _textGrey = Color(0xFF6B7A99);
+const _border = Color(0xFFD0DFFF);
+
 class NotesLibraryScreen extends StatefulWidget {
-  /// When [embedded] is true, appBar leading is hidden (used inside HomeScreen tabs)
   final bool embedded;
   const NotesLibraryScreen({super.key, this.embedded = false});
 
@@ -19,7 +27,7 @@ class _NotesLibraryScreenState extends State<NotesLibraryScreen> {
   String _search = '';
   NoteCategory? _filterCat;
   bool _favOnly = false;
-  String _sort = 'date'; // date | name | words
+  String _sort = 'date';
 
   @override
   void dispose() {
@@ -58,29 +66,78 @@ class _NotesLibraryScreenState extends State<NotesLibraryScreen> {
 
     final body = Column(
       children: [
+        // search bar
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          child: TextField(
-            controller: _searchCtrl,
-            onChanged: (v) => setState(() => _search = v),
-            style: Theme.of(context).textTheme.bodyLarge,
-            decoration: InputDecoration(
-              hintText: 'Search library...',
-              prefixIcon: const Icon(Icons.search_rounded, size: 20),
-              suffixIcon: _search.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.close_rounded, size: 18),
-                      onPressed: () {
-                        _searchCtrl.clear();
-                        setState(() => _search = '');
-                      },
-                    )
-                  : null,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: _border, width: 1.2),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF4A7CF5).withOpacity(0.10),
+                  blurRadius: 14,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: TextField(
+              controller: _searchCtrl,
+              onChanged: (v) => setState(() => _search = v),
+              cursorColor: _primary,
+              style: const TextStyle(
+                fontSize: 14,
+                color: _textDark,
+                fontWeight: FontWeight.w500,
+              ),
+              decoration: InputDecoration(
+                hintText: 'Search library…',
+                hintStyle: TextStyle(
+                  color: _textGrey.withOpacity(0.55),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                ),
+                prefixIcon: Icon(
+                  Icons.search_rounded,
+                  size: 20,
+                  color: _primary.withOpacity(0.70),
+                ),
+                suffixIcon: _search.isNotEmpty
+                    ? IconButton(
+                        icon: Icon(
+                          Icons.close_rounded,
+                          size: 18,
+                          color: _textGrey.withOpacity(0.65),
+                        ),
+                        onPressed: () {
+                          _searchCtrl.clear();
+                          setState(() => _search = '');
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: _primary, width: 1.5),
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 14),
+              ),
             ),
           ),
         ),
         const SizedBox(height: 10),
-        // Filter chips
+
+        // filter chips
         SizedBox(
           height: 40,
           child: ListView(
@@ -115,24 +172,29 @@ class _NotesLibraryScreenState extends State<NotesLibraryScreen> {
           ),
         ),
         const SizedBox(height: 8),
+
+        // sort row
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
             children: [
               Text(
                 '${notes.length} notes',
-                style: Theme.of(context).textTheme.bodyMedium,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: _textGrey.withOpacity(0.85),
+                ),
               ),
               const Spacer(),
               PopupMenuButton<String>(
                 onSelected: (v) => setState(() => _sort = v),
+                color: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 icon: Row(
                   children: [
-                    const Icon(
-                      Icons.sort_rounded,
-                      size: 16,
-                      color: AppColors.textMuted,
-                    ),
+                    Icon(Icons.sort_rounded, size: 16, color: _textGrey),
                     const SizedBox(width: 4),
                     Text(
                       _sort == 'date'
@@ -140,7 +202,7 @@ class _NotesLibraryScreenState extends State<NotesLibraryScreen> {
                           : _sort == 'name'
                           ? 'A–Z'
                           : 'Most words',
-                      style: Theme.of(context).textTheme.bodyMedium,
+                      style: TextStyle(fontSize: 13, color: _textGrey),
                     ),
                   ],
                 ),
@@ -154,6 +216,7 @@ class _NotesLibraryScreenState extends State<NotesLibraryScreen> {
           ),
         ),
         const SizedBox(height: 4),
+
         Expanded(
           child: notes.isEmpty
               ? _Empty(
@@ -174,35 +237,72 @@ class _NotesLibraryScreenState extends State<NotesLibraryScreen> {
     );
 
     if (widget.embedded) {
-      return SafeArea(child: body);
+      return Container(
+        color: _bgBot,
+        child: SafeArea(child: body),
+      );
     }
 
     return Scaffold(
-      backgroundColor: AppColors.bgDark,
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text('Library'),
-      ),
-      body: body,
-    );
-  }
-
-  PopupMenuItem<String> _menuItem(String v, String label, IconData icon) {
-    return PopupMenuItem(
-      value: v,
-      child: Row(
+      body: Stack(
         children: [
-          Icon(icon, size: 18, color: AppColors.textPrimary),
-          const SizedBox(width: 10),
-          Text(label),
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [_bgTop, _bgMid, _bgBot],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                stops: [0.0, 0.30, 1.0],
+              ),
+            ),
+          ),
+          SafeArea(
+            child: Column(
+              children: [
+                // custom app bar
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Row(
+                    children: [
+                      _CircleBack(onTap: () => Navigator.pop(context)),
+                      const SizedBox(width: 12),
+                      const Text(
+                        'Library',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          color: _textDark,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(child: body),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
+
+  PopupMenuItem<String> _menuItem(String v, String label, IconData icon) =>
+      PopupMenuItem(
+        value: v,
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: _textDark),
+            const SizedBox(width: 10),
+            Text(label, style: const TextStyle(color: _textDark)),
+          ],
+        ),
+      );
 }
+
+// ── Filter Chip ────────────────────────────────────────────────────
 
 class _Chip extends StatelessWidget {
   final String label;
@@ -211,67 +311,116 @@ class _Chip extends StatelessWidget {
   const _Chip({required this.label, required this.active, required this.onTap});
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          gradient: active ? AppColors.primaryGradient : null,
-          color: active ? null : AppColors.bgCard,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: active ? AppColors.primary : AppColors.bgBorder,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontFamily: 'Plus Jakarta Sans',
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: active ? Colors.white : AppColors.textSecondary,
-          ),
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        gradient: active
+            ? const LinearGradient(
+                colors: [Color(0xFF6BAAF8), _deep],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : null,
+        color: active ? null : Colors.white.withOpacity(0.72),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: active ? _primary : _border),
+        boxShadow: active
+            ? [
+                BoxShadow(
+                  color: _primary.withOpacity(0.28),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ]
+            : null,
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: active ? Colors.white : _textGrey,
         ),
       ),
-    );
-  }
+    ),
+  );
 }
+
+// ── Empty state ────────────────────────────────────────────────────
 
 class _Empty extends StatelessWidget {
   final bool hasSearch;
   const _Empty({required this.hasSearch});
 
   @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
+  Widget build(BuildContext context) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.72),
+              shape: BoxShape.circle,
+              border: Border.all(color: _border),
+            ),
+            child: Icon(
               hasSearch ? Icons.search_off_rounded : Icons.folder_open_outlined,
-              color: AppColors.textMuted,
-              size: 52,
+              color: _textGrey,
+              size: 32,
             ),
-            const SizedBox(height: 16),
-            Text(
-              hasSearch ? 'Nothing matches' : 'Library is empty',
-              style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            hasSearch ? 'Nothing matches' : 'Library is empty',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: _textDark,
             ),
-            const SizedBox(height: 8),
-            Text(
-              hasSearch
-                  ? 'Try adjusting filters or search term'
-                  : 'Record your first note to see it here',
-              style: Theme.of(context).textTheme.bodyMedium,
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            hasSearch
+                ? 'Try adjusting filters or search term'
+                : 'Record your first note to see it here',
+            style: TextStyle(fontSize: 14, color: _textGrey.withOpacity(0.85)),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
+
+// ── Circle back button ─────────────────────────────────────────────
+
+class _CircleBack extends StatelessWidget {
+  final VoidCallback onTap;
+  const _CircleBack({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.70),
+        shape: BoxShape.circle,
+        border: Border.all(color: _border, width: 1.2),
+      ),
+      child: const Icon(
+        Icons.arrow_back_ios_new_rounded,
+        size: 16,
+        color: _textDark,
+      ),
+    ),
+  );
 }
