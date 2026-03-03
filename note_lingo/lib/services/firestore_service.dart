@@ -1,5 +1,3 @@
-// lib/services/firestore_service.dart
-//
 // All Firestore database operations:
 //  - User profile CRUD
 //  - Notes CRUD
