@@ -1,5 +1,3 @@
-// lib/services/export_service.dart
-//
 // Generates and shares note exports:
 //  - PDF  (using the pdf package)
 //  - TXT  (plain text)
