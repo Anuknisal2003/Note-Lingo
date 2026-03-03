@@ -1,11 +1,3 @@
-// lib/services/ai_service.dart
-//
-// Handles all AI operations:
-//  1. Speech-to-text  → OpenAI Whisper API
-//  2. Summarization   → OpenAI GPT-4o
-//  3. Keyword extract → OpenAI GPT-4o
-//  4. Title generate  → OpenAI GPT-4o
-
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
