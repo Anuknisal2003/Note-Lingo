@@ -1,8 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/theme/app_theme.dart';
 import '../../models/note_model.dart';
 import '../../providers/notes_provider.dart';
+
+// ── Palette ────────────────────────────────────────────────────────
+const _bgTop = Color(0xFF6AABF8);
+const _bgMid = Color(0xFF9AC8FB);
+const _bgBot = Color(0xFFEFF5FF);
+const _deep = Color(0xFF2356C8);
+const _primary = Color(0xFF4F8EF7);
+const _textDark = Color(0xFF0E1A3A);
+const _textGrey = Color(0xFF6B7A99);
+const _cardBg = Color(0xFFFFFFFF);
+const _border = Color(0xFFD0DFFF);
 
 class ExportScreen extends StatefulWidget {
   final NoteModel note;
@@ -19,7 +29,7 @@ class _ExportScreenState extends State<ExportScreen> {
   bool _includeMeta = true;
   String? _exporting;
 
-  final _formats = const [
+  static const _formats = [
     _Format(
       id: 'pdf',
       label: 'PDF',
@@ -72,8 +82,15 @@ class _ExportScreenState extends State<ExportScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Exported as ${formatId.toUpperCase()} ✓'),
-          backgroundColor: AppColors.bgSurface,
+          content: Text(
+            'Exported as ${formatId.toUpperCase()} ✓',
+            style: const TextStyle(color: _textDark),
+          ),
+          backgroundColor: _cardBg,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
     } catch (e) {
@@ -89,120 +106,201 @@ class _ExportScreenState extends State<ExportScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgDark,
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text('Export Note'),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        physics: const BouncingScrollPhysics(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Note preview
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: AppColors.cardGradient,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.bgBorder),
+      body: Stack(
+        children: [
+          // gradient background
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [_bgTop, _bgMid, _bgBot],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                stops: [0.0, 0.30, 1.0],
               ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      gradient: AppColors.primaryGradient,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.note_alt_outlined,
-                      color: Colors.white,
-                      size: 22,
-                    ),
+            ),
+          ),
+
+          SafeArea(
+            child: Column(
+              children: [
+                // custom app bar
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
                   ),
-                  const SizedBox(width: 14),
-                  Expanded(
+                  child: Row(
+                    children: [
+                      _CircleBack(onTap: () => Navigator.pop(context)),
+                      const SizedBox(width: 12),
+                      const Text(
+                        'Export Note',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          color: _textDark,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    physics: const BouncingScrollPhysics(),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          widget.note.title,
-                          style: Theme.of(context).textTheme.titleLarge,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        // note preview card
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: _cardBg.withOpacity(0.80),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: _border),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(
+                                  0xFF4A7CF5,
+                                ).withOpacity(0.08),
+                                blurRadius: 16,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 46,
+                                height: 46,
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [Color(0xFF6BAAF8), _deep],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(13),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: _primary.withOpacity(0.28),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.note_alt_outlined,
+                                  color: Colors.white,
+                                  size: 22,
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      widget.note.title,
+                                      style: const TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w700,
+                                        color: _textDark,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${widget.note.wordCount} words · ${widget.note.category.label}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: _textGrey.withOpacity(0.85),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        Text(
-                          '${widget.note.wordCount} words · ${widget.note.category.label}',
-                          style: Theme.of(context).textTheme.bodyMedium,
+                        const SizedBox(height: 28),
+
+                        const _SectionLabel(text: 'Include in Export'),
+                        const SizedBox(height: 12),
+
+                        _ToggleTile(
+                          label: '🤖  AI Summary',
+                          value: _includeSummary,
+                          onChanged: (v) => setState(() => _includeSummary = v),
                         ),
+                        _ToggleTile(
+                          label: '🎙️  Full Transcript',
+                          value: _includeTranscript,
+                          onChanged: (v) =>
+                              setState(() => _includeTranscript = v),
+                        ),
+                        _ToggleTile(
+                          label: '#  Keywords',
+                          value: _includeKeywords,
+                          onChanged: (v) =>
+                              setState(() => _includeKeywords = v),
+                        ),
+                        _ToggleTile(
+                          label: '📋  Note Metadata',
+                          value: _includeMeta,
+                          onChanged: (v) => setState(() => _includeMeta = v),
+                        ),
+
+                        const SizedBox(height: 28),
+                        const _SectionLabel(text: 'Export Format'),
+                        const SizedBox(height: 12),
+
+                        ..._formats.map(
+                          (fmt) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _FormatCard(
+                              format: fmt,
+                              exporting: _exporting == fmt.id,
+                              disabled:
+                                  _exporting != null && _exporting != fmt.id,
+                              onTap: () => _export(fmt.id),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
                       ],
                     ),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 28),
-
-            Text(
-              'Include in Export',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 14),
-
-            _ToggleTile(
-              label: '🤖  AI Summary',
-              value: _includeSummary,
-              onChanged: (v) => setState(() => _includeSummary = v),
-            ),
-            _ToggleTile(
-              label: '🎙️  Full Transcript',
-              value: _includeTranscript,
-              onChanged: (v) => setState(() => _includeTranscript = v),
-            ),
-            _ToggleTile(
-              label: '#  Keywords',
-              value: _includeKeywords,
-              onChanged: (v) => setState(() => _includeKeywords = v),
-            ),
-            _ToggleTile(
-              label: '📋  Note Metadata',
-              value: _includeMeta,
-              onChanged: (v) => setState(() => _includeMeta = v),
-            ),
-            const SizedBox(height: 28),
-
-            Text(
-              'Export Format',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 14),
-
-            ..._formats.map(
-              (fmt) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _FormatCard(
-                  format: fmt,
-                  exporting: _exporting == fmt.id,
-                  disabled: _exporting != null && _exporting != fmt.id,
-                  onTap: () => _export(fmt.id),
                 ),
-              ),
+              ],
             ),
-            const SizedBox(height: 16),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
-// ── Toggle Tile ───────────────────────────────────────────────────
+// ── Section label ──────────────────────────────────────────────────
+
+class _SectionLabel extends StatelessWidget {
+  final String text;
+  const _SectionLabel({required this.text});
+
+  @override
+  Widget build(BuildContext context) => Text(
+    text,
+    style: const TextStyle(
+      fontSize: 15,
+      fontWeight: FontWeight.w700,
+      color: _textDark,
+      letterSpacing: -0.2,
+    ),
+  );
+}
+
+// ── Toggle Tile ────────────────────────────────────────────────────
 
 class _ToggleTile extends StatelessWidget {
   final String label;
@@ -215,32 +313,47 @@ class _ToggleTile extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: AppColors.bgCard,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.bgBorder),
-      ),
-      child: Row(
-        children: [
-          Text(label, style: Theme.of(context).textTheme.bodyLarge),
-          const Spacer(),
-          Switch(value: value, onChanged: onChanged),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.only(bottom: 8),
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+    decoration: BoxDecoration(
+      color: _cardBg.withOpacity(0.72),
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: value ? _primary.withOpacity(0.40) : _border),
+      boxShadow: [
+        BoxShadow(
+          color: const Color(0xFF4A7CF5).withOpacity(0.05),
+          blurRadius: 8,
+          offset: const Offset(0, 3),
+        ),
+      ],
+    ),
+    child: Row(
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            color: _textDark,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const Spacer(),
+        Switch(
+          value: value,
+          onChanged: onChanged,
+          activeColor: _primary,
+          activeTrackColor: _primary.withOpacity(0.30),
+        ),
+      ],
+    ),
+  );
 }
 
-// ── Format Card ───────────────────────────────────────────────────
+// ── Format Card ────────────────────────────────────────────────────
 
 class _Format {
-  final String id;
-  final String label;
-  final String desc;
+  final String id, label, desc;
   final IconData icon;
   final LinearGradient gradient;
   final Color glow;
@@ -256,8 +369,7 @@ class _Format {
 
 class _FormatCard extends StatelessWidget {
   final _Format format;
-  final bool exporting;
-  final bool disabled;
+  final bool exporting, disabled;
   final VoidCallback onTap;
   const _FormatCard({
     required this.format,
@@ -267,73 +379,111 @@ class _FormatCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: disabled ? null : onTap,
-      child: AnimatedOpacity(
-        opacity: disabled ? 0.4 : 1.0,
-        duration: const Duration(milliseconds: 200),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.bgCard,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.bgBorder),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  gradient: format.gradient,
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: format.glow.withOpacity(0.3),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: exporting
-                    ? const Center(
-                        child: SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: disabled ? null : onTap,
+    child: AnimatedOpacity(
+      opacity: disabled ? 0.40 : 1.0,
+      duration: const Duration(milliseconds: 200),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: _cardBg.withOpacity(0.80),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: _border),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF4A7CF5).withOpacity(0.08),
+              blurRadius: 14,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                gradient: format.gradient,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: format.glow.withOpacity(0.28),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: exporting
+                  ? const Center(
+                      child: SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
                         ),
-                      )
-                    : Icon(format.icon, color: Colors.white, size: 24),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      format.label,
-                      style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    )
+                  : Icon(format.icon, color: Colors.white, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    format.label,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: _textDark,
                     ),
-                    Text(
-                      format.desc,
-                      style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  Text(
+                    format.desc,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: _textGrey.withOpacity(0.85),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              Icon(
-                Icons.download_rounded,
-                color: exporting ? AppColors.textMuted : AppColors.primaryLight,
-                size: 22,
-              ),
-            ],
-          ),
+            ),
+            Icon(
+              Icons.download_rounded,
+              color: exporting ? _textGrey : _primary,
+              size: 22,
+            ),
+          ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
+
+// ── Circle back ────────────────────────────────────────────────────
+
+class _CircleBack extends StatelessWidget {
+  final VoidCallback onTap;
+  const _CircleBack({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.70),
+        shape: BoxShape.circle,
+        border: Border.all(color: _border, width: 1.2),
+      ),
+      child: const Icon(
+        Icons.arrow_back_ios_new_rounded,
+        size: 16,
+        color: _textDark,
+      ),
+    ),
+  );
 }
