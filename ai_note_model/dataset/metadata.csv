@@ -1,558 +1,501 @@
-file,transcript,duration
-file,transcript,duration
-sample_0000.wav,the lecture today covers the introduction to machine learning,6.13
-sample_0001.wav,neural networks are inspired by the human brain,4.92
-sample_0002.wav,deep learning uses multiple layers to learn representations,6.36
-sample_0003.wav,the training loss decreased significantly after ten epochs,5.42
-sample_0004.wav,gradient descent is used to minimize the loss function,5.67
-sample_0005.wav,overfitting occurs when the model memorizes training data,5.95
-sample_0006.wav,we use dropout layers to prevent overfitting,5.10
-sample_0007.wav,the validation accuracy is eighty five percent,4.64
-sample_0008.wav,convolutional neural networks are used for image classification,7.62
-sample_0009.wav,recurrent neural networks handle sequential data,6.44
-sample_0010.wav,let us schedule a follow up meeting for next week,5.40
-sample_0011.wav,the project deadline is the end of this month,4.72
-sample_0012.wav,we need to review the requirements document,4.30
-sample_0013.wav,please send me the updated report by friday,4.62
-sample_0014.wav,the budget for this quarter has been approved,4.40
-sample_0015.wav,action item assigned to the development team,4.64
-sample_0016.wav,we will present the results to the stakeholders,4.69
-sample_0017.wav,the sprint review is scheduled for thursday afternoon,4.69
-sample_0018.wav,can everyone confirm their availability for the demo,4.09
-sample_0019.wav,the client approved the new design mockups,3.00
-sample_0020.wav,the photosynthesis process converts sunlight to energy,4.91
-sample_0021.wav,water molecules consist of two hydrogen and one oxygen atom,6.80
-sample_0022.wav,the speed of light is approximately three hundred thousand kilometers per second,7.63
-sample_0023.wav,newton's first law states that objects in motion stay in motion,6.92
-sample_0024.wav,the capital of sri lanka is sri jayawardenepura kotte,5.13
-sample_0025.wav,binary search runs in logarithmic time complexity,6.81
-sample_0026.wav,a linked list stores elements in sequential memory nodes,5.22
-sample_0027.wav,the database uses a relational model with foreign keys,5.00
-sample_0028.wav,version control allows teams to collaborate on code,4.90
-sample_0029.wav,application programming interfaces connect different services,4.62
-sample_0030.wav,today's meeting covered three main topics,3.49
-sample_0031.wav,the first point discussed was the budget allocation,5.12
-sample_0032.wav,key action items from this session are as follows,5.72
-sample_0033.wav,this note was recorded on the fourteenth of february,5.13
-sample_0034.wav,please summarize the important points from this lecture,4.74
-sample_0035.wav,the professor mentioned that the exam will cover chapters one through five,6.52
-sample_0036.wav,important keywords from today include algorithm data structure and complexity,6.63
-sample_0037.wav,the interview went well and they will follow up next week,5.32
-sample_0038.wav,personal reminder to review the notes before the exam,5.10
-sample_0039.wav,this recording covers the second half of the lecture,4.71
-sample_0040.wav,the assignment submission date has been extended,4.07
-sample_0041.wav,we discussed the project proposal this morning,4.30
-sample_0042.wav,the research paper needs two more references,3.85
-sample_0043.wav,laboratory practical is scheduled for wednesday,4.42
-sample_0044.wav,the group presentation is worth thirty percent of the grade,4.94
-sample_0046.wav,the lecture today covers the fundamentals of machine learning,5.88
-sample_0047.wav,neural networks are computational models inspired by the human brain,6.61
-sample_0048.wav,deep learning uses multiple stacked layers to learn data representations,7.57
-sample_0049.wav,the training loss decreased significantly after ten epochs of training,6.47
-sample_0050.wav,gradient descent is an optimization algorithm used to minimize the loss function,9.09
-sample_0051.wav,overfitting occurs when a model memorizes the training data instead of generalizing,7.19
-sample_0052.wav,we use dropout regularization to prevent overfitting in deep neural networks,11.07
-sample_0053.wav,the validation accuracy reached eighty five percent after fine tuning,6.92
-sample_0054.wav,convolutional neural networks are primarily used for image classification tasks,11.33
-sample_0055.wav,recurrent neural networks are designed to handle sequential and time series data,24.03
-sample_0056.wav,the lecture today covers the fundamentals of machine learning,6.88
-sample_0057.wav,the lecture today covers the fundamentals of machine learning,6.10
-sample_0058.wav,neural networks are computational models inspired by the human brain,8.09
-sample_0059.wav,deep learning uses multiple stacked layers to learn data representations,8.70
-sample_0060.wav,the training loss decreased significantly after ten epochs of training,7.38
-sample_0061.wav,gradient descent is an optimization algorithm used to minimize the loss function,8.50
-sample_0062.wav,overfitting occurs when a model memorizes the training data instead of generalizing,8.25
-sample_0063.wav,we use dropout regularization to prevent overfitting in deep neural networks,7.99
-sample_0064.wav,the validation accuracy reached eighty five percent after fine tuning,7.65
-sample_0065.wav,convolutional neural networks are primarily used for image classification tasks,7.48
-sample_0066.wav,recurrent neural networks are designed to handle sequential and time series data,8.40
-sample_0067.wav,the transformer architecture uses self attention mechanisms for natural language processing,8.09
-sample_0068.wav,backpropagation is the algorithm used to compute gradients in neural networks,8.71
-sample_0069.wav,the softmax function converts raw logits into probability distributions,8.69
-sample_0070.wav,batch normalization helps stabilize and accelerate the training process,8.44
-sample_0071.wav,transfer learning allows us to reuse a pretrained model for a new task,6.66
-sample_0072.wav,the bert model was pretrained on a large corpus using masked language modeling,7.82
-sample_0073.wav,support vector machines find the optimal hyperplane to separate classes,7.08
-sample_0074.wav,decision trees recursively split data based on feature values,6.67
-sample_0075.wav,random forests combine multiple decision trees to improve prediction accuracy,8.45
-sample_0076.wav,k-means clustering groups data points into k distinct clusters,6.99
-sample_0077.wav,principal component analysis reduces the dimensionality of high dimensional data,7.81
-sample_0078.wav,the confusion matrix shows the performance of a classification model,6.37
-sample_0079.wav,precision measures the proportion of true positives among predicted positives,8.00
-sample_0080.wav,recall measures the proportion of true positives among actual positives,7.41
-sample_0081.wav,the f1 score is the harmonic mean of precision and recall,6.19
-sample_0082.wav,cross validation helps evaluate model performance on unseen data,7.58
-sample_0083.wav,hyperparameter tuning improves model performance through systematic search,7.27
-sample_0084.wav,the learning rate controls how much the model weights are updated each step,6.30
-sample_0085.wav,momentum helps the optimizer escape local minima during training,6.32
-sample_0086.wav,the adam optimizer combines momentum and adaptive learning rates,7.28
-sample_0087.wav,data augmentation artificially increases the size of the training dataset,7.72
-sample_0088.wav,object detection models identify and locate objects within images,7.84
-sample_0089.wav,semantic segmentation assigns a class label to every pixel in an image,6.69
-sample_0090.wav,natural language processing deals with the interaction between computers and human language,9.32
-sample_0091.wav,tokenization splits text into individual words or subword units,7.87
-sample_0092.wav,word embeddings represent words as dense numerical vectors in a high dimensional space,8.50
-sample_0093.wav,the attention mechanism allows models to focus on relevant parts of the input,7.88
-sample_0094.wav,generative adversarial networks consist of a generator and a discriminator,7.60
-sample_0095.wav,reinforcement learning trains agents to take actions in an environment to maximize reward,8.77
-sample_0096.wav,the q-learning algorithm learns the value of actions in each state,7.15
-sample_0097.wav,speech recognition converts spoken audio into written text,6.56
-sample_0098.wav,the wav2vec2 model uses self supervised learning for speech representation,9.12
-sample_0099.wav,connectionist temporal classification is used for sequence labeling tasks,7.40
-sample_0100.wav,the word error rate measures the accuracy of a speech recognition system,7.14
-sample_0101.wav,audio preprocessing involves resampling converting to mono and normalizing amplitude,8.23
-sample_0102.wav,the fast fourier transform converts a time domain signal into the frequency domain,8.32
-sample_0103.wav,mel frequency cepstral coefficients are widely used features for audio analysis,8.32
-sample_0104.wav,convolutional neural networks can also be applied to audio spectrograms,5.58
-sample_0105.wav,the encoder decoder architecture is commonly used in sequence to sequence models,7.72
-sample_0106.wav,beam search is a decoding strategy that explores multiple candidate sequences,7.99
-sample_0107.wav,the bleu score evaluates the quality of machine translated text,7.28
-sample_0108.wav,named entity recognition identifies and classifies named entities in text,7.71
-sample_0109.wav,part of speech tagging assigns grammatical labels to each word in a sentence,7.26
-sample_0110.wav,dependency parsing analyzes the grammatical structure of a sentence,6.92
-sample_0111.wav,sentiment analysis determines whether text expresses positive negative or neutral opinion,8.65
-sample_0112.wav,text summarization condenses a long document into a shorter version,7.63
-sample_0113.wav,question answering systems retrieve or generate answers from a given context,7.04
-sample_0114.wav,knowledge graphs represent entities and relationships in a structured format,6.91
-sample_0115.wav,federated learning trains models across decentralized devices without sharing raw data,10.15
-sample_0116.wav,edge computing brings computation and data storage closer to the source of data,8.02
-sample_0117.wav,calculus is the mathematical study of continuous change,6.16
-sample_0118.wav,the derivative measures the rate of change of a function,5.07
-sample_0119.wav,the integral computes the area under a curve between two points,6.63
-sample_0120.wav,linear algebra deals with vectors matrices and linear transformations,6.66
-sample_0121.wav,matrix multiplication is a fundamental operation in machine learning,6.73
-sample_0122.wav,the determinant of a matrix indicates whether the matrix is invertible,6.83
-sample_0123.wav,eigenvalues and eigenvectors describe the scaling effect of a linear transformation,7.66
-sample_0124.wav,probability theory provides the mathematical foundation for statistics,7.04
-sample_0125.wav,the normal distribution is a symmetric bell shaped probability distribution,7.24
-sample_0126.wav,the central limit theorem states that the sum of random variables tends toward a normal distribution,8.25
-sample_0127.wav,bayes theorem relates conditional probabilities using prior and posterior distributions,8.25
-sample_0128.wav,statistical hypothesis testing evaluates whether observed data supports a claim,7.70
-sample_0129.wav,the p value measures the probability of observing results as extreme as the data,7.55
-sample_0130.wav,regression analysis models the relationship between variables,6.03
-sample_0131.wav,logistic regression is used for binary classification problems,7.05
-sample_0132.wav,the coefficient of determination measures how well a model fits the data,6.53
-sample_0133.wav,variance measures the spread of data points around the mean,5.75
-sample_0134.wav,standard deviation is the square root of the variance,5.53
-sample_0135.wav,the correlation coefficient measures the strength and direction of a linear relationship,7.52
-sample_0136.wav,time series analysis studies data points collected at successive time intervals,7.12
-sample_0137.wav,fourier analysis decomposes a signal into its constituent frequencies,7.61
-sample_0138.wav,graph theory studies the properties of graphs consisting of nodes and edges,7.43
-sample_0139.wav,a binary tree is a hierarchical data structure where each node has at most two children,7.78
-sample_0140.wav,dynamic programming solves complex problems by breaking them into simpler subproblems,7.74
-sample_0141.wav,big o notation describes the upper bound of an algorithm's time complexity,7.52
-sample_0142.wav,sorting algorithms arrange elements of a list in a specific order,6.59
-sample_0143.wav,the quicksort algorithm uses a divide and conquer strategy,5.73
-sample_0144.wav,breadth first search explores all nodes at the current depth before moving deeper,7.41
-sample_0145.wav,depth first search explores as far as possible along each branch before backtracking,7.74
-sample_0146.wav,dijkstra's algorithm finds the shortest path between nodes in a weighted graph,7.65
-sample_0147.wav,hash tables provide average constant time complexity for insertion and lookup,8.04
-sample_0148.wav,a stack follows the last in first out principle,4.92
-sample_0149.wav,a queue follows the first in first out principle,5.52
-sample_0150.wav,linked lists store elements as nodes where each node points to the next,7.01
-sample_0151.wav,binary search efficiently finds a target value in a sorted array,6.22
-sample_0152.wav,recursion is a technique where a function calls itself to solve smaller subproblems,7.55
-sample_0153.wav,object oriented programming organizes code around objects and classes,7.21
-sample_0154.wav,encapsulation hides internal implementation details from external access,7.93
-sample_0155.wav,inheritance allows a class to inherit properties and methods from a parent class,8.04
-sample_0156.wav,polymorphism allows objects of different types to be treated as the same type,7.53
-sample_0157.wav,design patterns provide reusable solutions to common software design problems,8.36
-sample_0158.wav,the singleton pattern ensures only one instance of a class exists,7.05
-sample_0159.wav,the observer pattern defines a one to many dependency between objects,6.72
-sample_0160.wav,version control systems track changes to source code over time,6.13
-sample_0161.wav,continuous integration automatically builds and tests code after each commit,7.03
-sample_0162.wav,unit testing verifies that individual functions work correctly in isolation,7.52
-sample_0163.wav,integration testing checks that different components work together correctly,6.72
-sample_0164.wav,the agile methodology uses iterative cycles called sprints,6.71
-sample_0165.wav,code review is the practice of examining source code by peers before merging,7.23
-sample_0166.wav,documentation helps future developers understand the purpose of the code,6.91
-sample_0167.wav,thermodynamics studies the relationship between heat work and energy,7.32
-sample_0168.wav,newton's first law states that an object at rest remains at rest,6.55
-sample_0169.wav,the speed of light in a vacuum is approximately three hundred million meters per second,7.47
-sample_0170.wav,quantum mechanics describes the behavior of particles at the atomic scale,6.92
-sample_0171.wav,the periodic table organizes chemical elements by atomic number,6.62
-sample_0172.wav,photosynthesis is the process by which plants convert sunlight into glucose,7.13
-sample_0173.wav,dna carries the genetic instructions for the development of living organisms,7.55
-sample_0174.wav,evolution explains the diversity of life through natural selection,6.13
-sample_0175.wav,the greenhouse effect causes the earth's atmosphere to retain heat,6.36
-sample_0176.wav,electrical resistance is measured in ohms,5.25
-sample_0177.wav,ohm's law states that voltage equals current multiplied by resistance,7.31
-sample_0178.wav,semiconductors have electrical conductivity between conductors and insulators,7.66
-sample_0179.wav,the operating system manages hardware resources and provides services to applications,8.03
-sample_0180.wav,memory management allocates and deallocates memory for running processes,7.13
-sample_0181.wav,the cpu executes instructions by fetching decoding and executing them,7.42
-sample_0182.wav,cache memory reduces the time to access data from the main memory,6.93
-sample_0183.wav,parallel computing performs multiple computations simultaneously,7.13
-sample_0184.wav,cloud computing provides on demand access to shared computing resources,6.63
-sample_0185.wav,virtualization allows multiple operating systems to run on a single physical machine,8.23
-sample_0186.wav,containerization packages applications with their dependencies into isolated environments,8.33
-sample_0187.wav,network protocols define rules for communication between devices,8.03
-sample_0188.wav,the tcp ip model is the foundational framework for internet communication,7.91
-sample_0189.wav,encryption protects data by transforming it into an unreadable format,7.72
-sample_0190.wav,public key cryptography uses a pair of keys for secure communication,7.33
-sample_0191.wav,firewalls monitor and filter incoming and outgoing network traffic,7.13
-sample_0192.wav,sql is a language used for managing relational databases,6.76
-sample_0193.wav,nosql databases store data in flexible non tabular formats,7.22
-sample_0194.wav,indexing improves the speed of data retrieval operations in databases,7.22
-sample_0195.wav,acid properties ensure reliable database transactions,6.47
-sample_0196.wav,database normalization reduces data redundancy by organizing tables efficiently,8.23
-sample_0197.wav,rest apis use http methods to enable communication between systems,9.55
-sample_0198.wav,json is a lightweight data interchange format widely used in web development,7.98
-sample_0199.wav,microservices architecture breaks applications into small independent services,8.29
-sample_0200.wav,load balancing distributes incoming traffic across multiple servers,6.44
-sample_0201.wav,caching stores frequently accessed data to reduce response time,8.36
-sample_0202.wav,message queues enable asynchronous communication between services,7.08
-sample_0203.wav,devops combines software development and operations to improve deployment speed,6.80
-sample_0204.wav,infrastructure as code manages and provisions computing resources through scripts,7.48
-sample_0205.wav,kubernetes orchestrates containerized applications across a cluster of machines,7.10
-sample_0206.wav,the internet of things connects physical devices to the internet,5.17
-sample_0207.wav,blockchain is a distributed ledger that records transactions securely,6.31
-sample_0208.wav,augmented reality overlays digital content onto the real world,7.20
-sample_0209.wav,virtual reality creates an immersive simulated environment,6.29
-sample_0210.wav,robotics combines mechanical engineering software and electronics,5.84
-sample_0211.wav,computer vision enables machines to interpret and understand visual information,6.62
-sample_0212.wav,autonomous vehicles use sensors and ai to navigate without human input,7.30
-sample_0213.wav,bioinformatics applies computational methods to analyze biological data,6.19
-sample_0214.wav,the human genome contains approximately three billion base pairs,5.85
-sample_0215.wav,crispr is a gene editing technology that can modify dna sequences,7.31
-sample_0216.wav,nanotechnology manipulates matter at the atomic and molecular scale,6.88
-sample_0217.wav,let us begin today's meeting by reviewing the agenda,4.61
-sample_0218.wav,the project deadline is set for the end of next month,5.06
-sample_0219.wav,we need to finalize the requirements before development begins,5.32
-sample_0220.wav,the client has requested additional features for the next sprint,4.86
-sample_0221.wav,let me share my screen to show the latest progress,4.26
-sample_0222.wav,the team completed all tasks assigned in the previous sprint,4.68
-sample_0223.wav,we identified three critical bugs that need to be fixed immediately,5.45
-sample_0224.wav,the performance tests showed a significant improvement in response time,5.63
-sample_0225.wav,we should schedule a follow up meeting to discuss the feedback,5.47
-sample_0226.wav,the budget for this quarter has been approved by management,4.35
-sample_0227.wav,the new feature will be released in the next production build,4.78
-sample_0228.wav,please update the project documentation before the end of the week,5.46
-sample_0229.wav,the user interface design has been reviewed and approved by the client,5.78
-sample_0230.wav,we are behind schedule by two days and need to catch up,4.98
-sample_0231.wav,the database migration was completed successfully last night,4.68
-sample_0232.wav,the api integration with the third party service is now working,5.68
-sample_0233.wav,we need to add unit tests for the authentication module,4.17
-sample_0234.wav,the pull request has been reviewed and is ready to merge,4.82
-sample_0235.wav,the staging environment is set up and ready for testing,4.57
-sample_0236.wav,we discovered a memory leak in the recording module,4.13
-sample_0237.wav,the code review identified several areas for improvement,5.27
-sample_0238.wav,we need to discuss the architecture before writing any more code,6.15
-sample_0239.wav,the mobile app has been tested on both android and ios devices,7.38
-sample_0240.wav,the firebase configuration has been updated for the production environment,5.34
-sample_0241.wav,the team will present the demo to stakeholders on friday,5.01
-sample_0242.wav,we need to optimize the database queries to improve performance,5.29
-sample_0243.wav,the user acceptance testing will begin next monday,5.45
-sample_0244.wav,the security audit revealed two vulnerabilities that need to be patched,5.36
-sample_0245.wav,the deployment pipeline has been set up using continuous integration,6.15
-sample_0246.wav,the sprint retrospective will be held tomorrow afternoon,4.48
-sample_0247.wav,i would like to raise a concern about the current timeline,4.62
-sample_0248.wav,can everyone confirm their availability for the next two weeks,4.75
-sample_0249.wav,the technical specification document needs to be updated,4.69
-sample_0250.wav,we agreed to use the agile methodology for this project,5.21
-sample_0251.wav,the product backlog has been prioritized based on business value,5.88
-sample_0252.wav,the qa team will begin testing the new features tomorrow,5.52
-sample_0253.wav,we need to improve the error handling in the backend service,4.48
-sample_0254.wav,the server costs have increased due to higher usage this month,4.98
-sample_0255.wav,the marketing team has requested a new dashboard feature,4.21
-sample_0256.wav,the mobile app notification system is now fully integrated,4.71
-sample_0257.wav,the team has been divided into two groups for parallel development,4.63
-sample_0258.wav,the release notes have been drafted and are ready for review,4.95
-sample_0259.wav,we should add more logging to help with future debugging,4.59
-sample_0260.wav,the customer support team reported three new issues this week,4.72
-sample_0261.wav,the onboarding flow has been redesigned based on user feedback,6.08
-sample_0262.wav,the analytics dashboard is showing a twenty percent increase in daily active users,8.41
-sample_0263.wav,we need to discuss the plan for handling increased traffic during the launch,5.45
-sample_0264.wav,the backend team will complete the api endpoints by wednesday,4.85
-sample_0265.wav,the design team has finalized the new color scheme and typography,5.08
-sample_0266.wav,the project manager will send out the updated timeline by tomorrow,5.87
-sample_0267.wav,action items from today's meeting will be sent via email,6.99
-sample_0268.wav,please make sure all tasks are updated in the project management tool,5.75
-sample_0269.wav,the next release is scheduled for the fifteenth of this month,6.17
-sample_0270.wav,we should create a risk register to track potential project risks,6.57
-sample_0271.wav,the team leads will present their progress updates every monday morning,7.23
-sample_0272.wav,the client approved the wireframes and we can proceed to development,4.58
-sample_0273.wav,we are waiting for access credentials from the infrastructure team,5.97
-sample_0274.wav,the support ticket has been escalated to the senior developer,4.67
-sample_0275.wav,the integration tests are passing on all major platforms,5.55
-sample_0276.wav,the team worked overtime to meet the critical deadline,4.13
-sample_0277.wav,i will follow up with the vendor about the delayed delivery,4.64
-sample_0278.wav,the project kickoff meeting is scheduled for next tuesday at ten,5.66
-sample_0279.wav,we need to define the acceptance criteria for each user story,5.78
-sample_0280.wav,the sprint velocity has improved compared to the previous iteration,5.79
-sample_0281.wav,all team members should review the updated coding standards,4.99
-sample_0282.wav,the database schema has been updated to support the new features,5.48
-sample_0283.wav,we will conduct a knowledge transfer session before the handover,5.48
-sample_0284.wav,the infrastructure costs are within the allocated budget,5.44
-sample_0285.wav,the team has successfully completed the proof of concept,5.32
-sample_0286.wav,we need to address the technical debt accumulated over the past sprints,5.74
-sample_0287.wav,the beta version will be released to a selected group of users,5.73
-sample_0288.wav,the monitoring dashboard is showing all services are healthy,4.49
-sample_0289.wav,we should document the deployment process for future reference,6.04
-sample_0290.wav,the load testing results indicate the system can handle one thousand concurrent users,8.24
-sample_0291.wav,the hotfix has been deployed to production and the issue is resolved,7.86
-sample_0292.wav,the quarterly review meeting will be held on the last friday of the month,5.71
-sample_0293.wav,we need to align with the business team on the product roadmap,4.75
-sample_0294.wav,the user research findings will be presented in tomorrow's meeting,5.42
-sample_0295.wav,the api documentation has been published on the developer portal,5.33
-sample_0296.wav,we agreed to postpone the feature to the next major release,5.25
-sample_0297.wav,the accessibility audit showed the application meets the required standards,7.35
-sample_0298.wav,the new team member will be onboarded starting from monday,5.73
-sample_0299.wav,we should improve the app store listing to increase downloads,5.83
-sample_0300.wav,the payment integration has been tested in the sandbox environment,6.27
-sample_0301.wav,the error rate has dropped significantly after the latest fix,5.95
-sample_0302.wav,the team is confident we will meet the release target,5.13
-sample_0303.wav,please review the updated terms of service before the meeting,5.52
-sample_0304.wav,the performance optimization reduced the app startup time by forty percent,6.83
-sample_0305.wav,we need to plan the migration from the old system to the new platform,6.57
-sample_0306.wav,the weekly status report will be sent to all stakeholders every friday,6.03
-sample_0307.wav,the feature flags allow us to roll out changes gradually,6.23
-sample_0308.wav,the production incident has been resolved and a postmortem will be conducted,6.57
-sample_0309.wav,the team will attend a training workshop on cloud architecture next week,6.02
-sample_0310.wav,the vendor has confirmed delivery of the hardware by end of month,5.96
-sample_0311.wav,all developers should review and sign the updated security policy,5.84
-sample_0312.wav,the a/b test results show that version b has a higher conversion rate,8.14
-sample_0313.wav,the engineering team will present the technical proposal to the board,6.24
-sample_0314.wav,the mobile app update has been submitted to the app store for review,5.84
-sample_0315.wav,we are implementing two factor authentication for improved security,6.82
-sample_0316.wav,the project charter has been signed by all key stakeholders,6.44
-sample_0317.wav,the retrospective feedback will be incorporated into the next sprint planning,6.88
-sample_0318.wav,the cloud infrastructure has been migrated to the new region,5.23
-sample_0319.wav,we need to improve the test coverage to at least eighty percent,7.26
-sample_0320.wav,the ui redesign has improved the user satisfaction score significantly,7.86
-sample_0321.wav,the contract with the new vendor has been reviewed by the legal team,5.74
-sample_0322.wav,the capacity planning exercise suggests we need two more developers,5.15
-sample_0323.wav,the new onboarding checklist has reduced setup time by half,5.64
-sample_0324.wav,the team demonstrated the completed features during the sprint review,5.51
-sample_0325.wav,the risk assessment identified three high priority items to address,6.07
-sample_0326.wav,we will use feature branches and pull requests for all code changes,7.15
-sample_0327.wav,the technical architecture review is scheduled for thursday afternoon,6.24
-sample_0328.wav,the data backup and recovery procedures have been tested and verified,5.74
-sample_0329.wav,today i need to buy groceries milk bread eggs and vegetables,6.04
-sample_0330.wav,i have a dentist appointment on thursday at two thirty,4.65
-sample_0331.wav,i should call mom and check in on how she is doing,5.52
-sample_0332.wav,i want to finish reading the book i started last week,4.42
-sample_0333.wav,i need to pay the electricity bill before the due date,4.64
-sample_0334.wav,my gym session starts at six thirty tomorrow morning,4.94
-sample_0335.wav,i should prepare my presentation slides before friday,4.34
-sample_0336.wav,i need to renew my library membership this week,4.43
-sample_0337.wav,i want to try the new restaurant that opened near the university,5.75
-sample_0338.wav,i should back up my laptop files to the external hard drive,5.05
-sample_0339.wav,i need to reply to the email from my professor about the assignment,5.74
-sample_0340.wav,i want to start learning a new programming language this month,4.83
-sample_0341.wav,i should organize my desk and clean up my workspace,4.65
-sample_0342.wav,i need to submit my project report by midnight tonight,4.83
-sample_0343.wav,i want to go for a walk in the park this evening,4.33
-sample_0344.wav,i should prepare a study schedule for the upcoming exams,4.73
-sample_0345.wav,i need to pick up the package from the post office tomorrow,4.64
-sample_0346.wav,i want to cook a healthy meal instead of ordering takeout,5.13
-sample_0347.wav,i should check the bus schedule for the early morning route,4.66
-sample_0348.wav,i need to transfer money to my savings account before the weekend,4.93
-sample_0349.wav,i want to watch the documentary i bookmarked last month,5.74
-sample_0350.wav,i should charge my laptop and phone before going to bed,4.65
-sample_0351.wav,i need to return the library books by thursday,4.13
-sample_0352.wav,i want to learn how to cook a new recipe this weekend,4.13
-sample_0353.wav,i should review my notes from today's lecture before sleeping,4.71
-sample_0354.wav,i need to print the assignment and submit it in class tomorrow,4.93
-sample_0355.wav,i want to complete the online course i enrolled in last month,5.03
-sample_0356.wav,i should set a reminder for the team meeting at nine tomorrow,4.64
-sample_0357.wav,i need to buy a new notebook for the upcoming semester,5.05
-sample_0358.wav,i want to catch up with my friends over the weekend,4.24
-sample_0359.wav,i should update my resume with my latest project experience,5.56
-sample_0360.wav,i need to register for the exam before the registration deadline,6.12
-sample_0361.wav,i want to finish the coding exercise before the tutorial session,5.13
-sample_0362.wav,i should drink more water throughout the day,3.64
-sample_0363.wav,i need to fix the bug in my personal project before tomorrow,4.94
-sample_0364.wav,i want to go to the library and study for three hours,4.92
-sample_0365.wav,i should review the flashcards for tomorrow's quiz,4.23
-sample_0366.wav,i need to fill up my water bottle and pack my bag for class,5.56
-sample_0367.wav,i want to take a short nap before the evening lecture,4.13
-sample_0368.wav,i should research internship opportunities for the summer break,4.43
-sample_0369.wav,i need to get a haircut before the job interview next week,6.15
-sample_0370.wav,i want to plan a trip with my friends during the semester break,4.97
-sample_0371.wav,i should read through the project feedback from my supervisor,4.54
-sample_0372.wav,i need to install the required software before the lab session,4.55
-sample_0373.wav,i want to write in my journal about the progress i made today,5.13
-sample_0374.wav,i should stretch and exercise for at least thirty minutes today,5.43
-sample_0375.wav,i need to confirm my attendance for the workshop on monday,5.24
-sample_0376.wav,i want to organize my digital files into proper folders,6.94
-sample_0377.wav,i should buy a new phone charger as mine is broken,4.65
-sample_0378.wav,i need to upload the assignment to the online submission portal,4.84
-sample_0379.wav,i want to check if there are any scholarships i can apply for,5.27
-sample_0380.wav,i should prepare questions to ask during the guest lecture tomorrow,5.45
-sample_0381.wav,i need to refill my medication prescription before it runs out,5.52
-sample_0382.wav,i want to spend some time this weekend on a personal side project,6.44
-sample_0383.wav,i should text my study group about the meeting time and venue,4.95
-sample_0384.wav,i need to label and organize my study notes by subject,5.13
-sample_0385.wav,i want to complete the tutorial on data visualization this afternoon,5.74
-sample_0386.wav,i should check the weather forecast before planning outdoor activities,5.12
-sample_0387.wav,i need to follow up with my internship application status,5.15
-sample_0388.wav,i want to reduce my screen time before going to sleep,4.27
-sample_0389.wav,i should review the grading rubric before submitting the report,1.13
-sample_0390.wav,i need to connect my bluetooth headphones to the new phone,4.95
-sample_0391.wav,i want to learn more about cloud computing during the holidays,5.03
-sample_0392.wav,i should prepare a list of topics to discuss with my academic advisor,6.04
-sample_0393.wav,i need to attend the career fair at the university this wednesday,5.94
-sample_0394.wav,i want to improve my typing speed by practicing every day,5.77
-sample_0395.wav,i should save my project files to both local and cloud storage,5.53
-sample_0396.wav,i need to respond to the group chat about the presentation schedule,5.14
-sample_0397.wav,i want to track my daily habits using a simple checklist,5.35
-sample_0398.wav,i should research the best laptop for programming and development,4.94
-sample_0399.wav,i need to submit my leave application before the end of the week,4.84
-sample_0400.wav,i want to start waking up earlier to have more productive mornings,4.78
-sample_0401.wav,i should read the recommended research paper before the seminar,4.94
-sample_0402.wav,i need to bring my student id to the examination hall,4.13
-sample_0403.wav,i want to practice coding problems for at least one hour daily,4.65
-sample_0404.wav,i should create a budget plan for the upcoming month,4.01
-sample_0405.wav,i need to update my linkedin profile with my recent projects,5.04
-sample_0406.wav,i want to complete all pending assignments before the weekend,5.17
-sample_0407.wav,i should review the terms and conditions before signing the contract,4.85
-sample_0408.wav,i need to coordinate with my teammates about the final deliverable,5.95
-sample_0409.wav,i want to maintain a consistent sleep schedule for better focus,5.42
-sample_0410.wav,i should prepare a short self introduction for the networking event,5.52
-sample_0411.wav,i need to finalize my project topic and submit the proposal today,5.87
-sample_0412.wav,i want to explore new study techniques to improve my retention,5.25
-sample_0413.wav,i should check my email every morning and respond within the day,5.34
-sample_0414.wav,i need to buy a new pair of earphones for online classes,5.03
-sample_0415.wav,i want to volunteer for the university tech event next month,5.05
-sample_0416.wav,i should make a grocery list before going to the supermarket,4.32
-sample_0417.wav,i need to tidy up my room and do the laundry this weekend,5.26
-sample_0418.wav,i want to finish the self assessment form for the performance review,5.34
-sample_0419.wav,i should print and read the course outline for the new module,5.15
-sample_0420.wav,i need to update the dependencies in my project before deployment,5.45
-sample_0421.wav,i want to take a full day off this sunday to rest and recharge,6.57
-sample_0422.wav,i should test my internet connection before the online examination,5.65
-sample_0423.wav,i need to prepare a summary of the chapter for tomorrow's discussion,5.24
-sample_0424.wav,i want to attend the seminar on artificial intelligence next thursday,5.53
-sample_0425.wav,i should double check all my answers before submitting the exam,5.32
-sample_0426.wav,i need to save the research paper links into my reference manager,5.66
-sample_0427.wav,i want to build a small app to practice what i learned this week,5.44
-sample_0428.wav,i should install the code linter and formatter in my development environment,6.25
-sample_0429.wav,i need to clear the browser cache and cookies to fix the loading issue,6.34
-sample_0430.wav,please open the terminal and navigate to the project folder,5.25
-sample_0431.wav,run the command to install the required dependencies,4.56
-sample_0432.wav,the build was successful with no errors or warnings,4.65
-sample_0433.wav,i will push the changes to the main branch after review,4.94
-sample_0434.wav,the function returns a list of strings sorted alphabetically,5.42
-sample_0435.wav,the variable name should be descriptive and follow naming conventions,5.77
-sample_0436.wav,add a comment to explain the purpose of this code block,5.65
-sample_0437.wav,the loop iterates through each element in the array,6.47
-sample_0438.wav,the condition checks whether the input value is null or empty,5.65
-sample_0439.wav,the async function awaits the result of the api call,6.74
-sample_0440.wav,handle the exception and display a meaningful error message,5.34
-sample_0441.wav,the class inherits from the base model and overrides the build method,5.66
-sample_0442.wav,import the required packages at the top of the file,5.02
-sample_0443.wav,the constructor initializes all required fields and sets default values,6.46
-sample_0444.wav,refactor this method to reduce its complexity and improve readability,7.65
-sample_0445.wav,write a test case to verify the expected output of this function,7.03
-sample_0446.wav,the configuration file stores environment variables and api endpoints,6.35
-sample_0447.wav,deploy the updated version to the staging server for testing,5.55
-sample_0448.wav,the logs show that the request failed with a five hundred error,6.06
-sample_0449.wav,increase the timeout duration to handle slow network connections,5.32
-sample_0450.wav,the data is serialized to json before being sent over the network,6.17
-sample_0451.wav,parse the response and extract the relevant fields,5.05
-sample_0452.wav,the model was trained on a dataset of ten thousand audio samples,8.25
-sample_0453.wav,fine tuning improves the model's performance on domain specific tasks,6.61
-sample_0454.wav,save the model checkpoint after every hundred training steps,4.84
-sample_0455.wav,load the pretrained weights and freeze the lower layers,5.05
-sample_0456.wav,the inference time is under two seconds on a standard laptop,5.53
-sample_0457.wav,monitor the training loss and validation accuracy on the dashboard,6.63
-sample_0458.wav,the dataset was split into eighty percent training and twenty percent testing,5.58
-sample_0459.wav,normalize the audio to have zero mean and unit variance,5.53
-sample_0460.wav,convert the audio file to sixteen kilohertz mono format,5.66
-sample_0461.wav,the transcription pipeline processes audio files in batches,5.75
-sample_0462.wav,the greedy decoder selects the most probable token at each step,6.56
-sample_0463.wav,evaluate the model using the word error rate metric,4.82
-sample_0464.wav,the vocabulary was built from the training transcripts,4.73
-sample_0465.wav,tokenize the sentence into individual characters for ctc training,6.25
-sample_0466.wav,the flask server starts on port five thousand by default,5.05
-sample_0467.wav,send a post request to the transcribe endpoint with the audio file,5.96
-sample_0468.wav,the health check endpoint returns the model status and device information,6.32
-sample_0469.wav,the server runs on your local machine and listens on all interfaces,6.46
-sample_0470.wav,connect to the server using the local ip address of your computer,5.86
-sample_0471.wav,the mobile app sends the recorded audio to the flask api,5.87
-sample_0472.wav,the response contains the transcribed text and inference duration,5.94
-sample_0473.wav,firebase stores the user profile and notes in firestore collections,6.46
-sample_0474.wav,authentication is handled by firebase using email and password,5.95
-sample_0475.wav,the notes are synced in real time across all user devices,6.15
-sample_0476.wav,the recording is saved as an m4a file in temporary storage,6.75
-sample_0477.wav,export the note as a pdf and share it using the native share sheet,6.23
-sample_0478.wav,the keyword extraction identifies the most frequent words in the transcript,6.34
-sample_0479.wav,the summary is generated by extracting the first two sentences,4.82
-sample_0480.wav,good morning everyone let us get started with today's session,4.74
-sample_0481.wav,thank you for attending and please feel free to ask questions,5.27
-sample_0482.wav,that concludes today's lecture and we will continue next week,5.13
-sample_0483.wav,does anyone have any questions before we move on,3.94
-sample_0484.wav,please make sure to submit the assignment before the deadline,4.65
-sample_0485.wav,the exam will cover all topics discussed in the last four weeks,5.25
-sample_0486.wav,study groups are encouraged to collaborate on the practice problems,5.32
-sample_0487.wav,office hours are available on tuesday and thursday from two to four,6.45
-sample_0488.wav,the tutorial session will be held in the computer lab on level two,5.45
-sample_0489.wav,please bring your student id to every examination,4.12
-sample_0490.wav,the attendance policy requires at least eighty percent presence,4.82
-sample_0491.wav,late submissions will be penalized five percent per day,4.73
-sample_0492.wav,the project accounts for forty percent of the final grade,4.55
-sample_0493.wav,group presentations will be held during the last week of semester,8.44
-sample_0494.wav,please review the marking rubric before submitting your work,4.94
-sample_0495.wav,any academic misconduct will result in serious consequences,7.06
-sample_0496.wav,the supplementary reading list is available on the course portal,4.65
-sample_0497.wav,guest lecturers will be invited for the advanced topics module,5.26
-sample_0498.wav,the lab equipment must be handled with care and returned after use,5.54
-sample_0499.wav,please log off the computer at the end of each lab session,5.63
-sample_0500.wav,the results of the midterm examination have been posted online,5.22
-sample_0501.wav,make sure your code is well commented before the demonstration,4.78
-sample_0502.wav,the final project must include a written report and a live demo,5.53
-sample_0503.wav,teams of three to four students are required for the group project,6.02
-sample_0504.wav,the project proposal must be approved before development begins,5.14
-sample_0505.wav,the grading will be based on functionality design and documentation,6.36
-sample_0506.wav,all references must be cited using the apa format,4.83
-sample_0507.wav,plagiarism detection software will be used to check all submissions,5.75
-sample_0508.wav,the assignment requires both a written component and a practical task,5.85
-sample_0509.wav,please use the discussion forum for any questions about the course,5.46
-sample_0510.wav,updates to the timetable will be announced through the official portal,5.06
-sample_0511.wav,the department will host a career fair for final year students,4.75
-sample_0512.wav,industry mentors are available to provide guidance on final year projects,6.13
-sample_0513.wav,the scholarship application deadline is at the end of this month,5.03
-sample_0514.wav,students are encouraged to participate in hackathons and competitions,6.26
-sample_0515.wav,the university provides free access to all major software development tools,5.24
-sample_0516.wav,research opportunities are available for high achieving students,5.05
-sample_0517.wav,the student council is organizing a tech fest for all departments,5.26
-sample_0518.wav,please register your attendance using the qr code at the entrance,4.83
-sample_0519.wav,the library has extended its opening hours during the exam period,6.74
-sample_0520.wav,digital copies of all textbooks are available through the library portal,4.83
-sample_0521.wav,the computer science department welcomes all students to the new semester,5.25
-sample_0522.wav,remember to take regular breaks and look after your mental health,4.84
-sample_0523.wav,time management is one of the most important skills for university success,5.34
-sample_0524.wav,do not hesitate to reach out to your academic advisor if you need support,6.54
-sample_0525.wav,building a strong portfolio will help you stand out in the job market,5.53
-sample_0526.wav,networking with professionals in your field can open many career opportunities,6.04
-sample_0527.wav,learning to communicate clearly is as important as technical skills,5.52
-sample_0528.wav,always back up your work to avoid losing progress unexpectedly,5.52
-sample_0529.wav,version control is an essential skill for every software developer,6.35
-sample_0530.wav,start your assignments early to allow time for revision and improvement,5.52
-sample_0531.wav,reading documentation carefully can save hours of debugging time,5.63
-sample_0532.wav,the best way to learn programming is to build real projects,4.98
-sample_0533.wav,consistency and practice are the keys to mastering any technical skill,7.26
-sample_0534.wav,the microphone permission must be granted before recording begins,4.84
-sample_0535.wav,tap the record button to start capturing your voice,4.13
-sample_0536.wav,the audio file is saved in m4a format after recording stops,5.54
-sample_0537.wav,the transcription result is displayed on the note detail screen,5.13
-sample_0538.wav,you can search your notes using keywords from the transcript,5.32
-sample_0539.wav,the note has been saved successfully to your library,4.35
-sample_0540.wav,swipe left on a note card to reveal the delete option,5.25
-sample_0541.wav,tap the star icon to mark a note as your favourite,5.26
-sample_0542.wav,the export button allows you to share the note as a pdf,6.73
-sample_0543.wav,the profile screen shows your total notes and recording minutes,6.02
-sample_0544.wav,sign out from the profile screen using the sign out button,4.12
-sample_0545.wav,the app supports dark mode for comfortable night time use,5.56
-sample_0546.wav,connect to the same wifi network as your computer to use the ai,5.96
-sample_0547.wav,the ai server must be running before you start recording,5.13
-sample_0548.wav,start the flask server by running python flask underscore api slash app dot py,9.06
-sample_0549.wav,the server processes your audio and returns the transcription result,5.74
-sample_0550.wav,the model was trained specifically on your own voice samples,5.54
-sample_0551.wav,recording more samples improves the accuracy of the transcription,4.82
-sample_0552.wav,the language setting controls how your notes are categorized,4.23
-sample_0553.wav,you can choose between english sinhala and tamil for your recordings,5.02
-sample_0554.wav,the keyword tags help you quickly find related notes later,4.94
-sample_0555.wav,thank you for using note lingo your personal ai note assistant,5.13
-sample_0556.wav,your voice is the most natural way to capture ideas and information,5.65
+file,transcript
+sample_0001.wav,"the student reviews the lecture notes for machine learning in round one"
+sample_0002.wav,"the student summarizes the lecture notes for machine learning in round two"
+sample_0003.wav,"the student explains the lecture notes for machine learning in round three"
+sample_0004.wav,"the student records the lecture notes for machine learning in round four"
+sample_0005.wav,"the student tests the lecture notes for machine learning in round five"
+sample_0006.wav,"the student organizes the lecture notes for machine learning in round six"
+sample_0007.wav,"the student compares the lecture notes for machine learning in round seven"
+sample_0008.wav,"the student improves the lecture notes for machine learning in round eight"
+sample_0009.wav,"the student documents the lecture notes for machine learning in round nine"
+sample_0010.wav,"the student verifies the lecture notes for machine learning in round ten"
+sample_0011.wav,"the lecturer reviews the lecture notes for machine learning in round one"
+sample_0012.wav,"the lecturer summarizes the lecture notes for machine learning in round two"
+sample_0013.wav,"the lecturer explains the lecture notes for machine learning in round three"
+sample_0014.wav,"the lecturer records the lecture notes for machine learning in round four"
+sample_0015.wav,"the lecturer tests the lecture notes for machine learning in round five"
+sample_0016.wav,"the lecturer organizes the lecture notes for machine learning in round six"
+sample_0017.wav,"the lecturer compares the lecture notes for machine learning in round seven"
+sample_0018.wav,"the lecturer improves the lecture notes for machine learning in round eight"
+sample_0019.wav,"the lecturer documents the lecture notes for machine learning in round nine"
+sample_0020.wav,"the lecturer verifies the lecture notes for machine learning in round ten"
+sample_0021.wav,"the researcher reviews the lecture notes for machine learning in round one"
+sample_0022.wav,"the researcher summarizes the lecture notes for machine learning in round two"
+sample_0023.wav,"the researcher explains the lecture notes for machine learning in round three"
+sample_0024.wav,"the researcher records the lecture notes for machine learning in round four"
+sample_0025.wav,"the researcher tests the lecture notes for machine learning in round five"
+sample_0026.wav,"the researcher organizes the lecture notes for machine learning in round six"
+sample_0027.wav,"the researcher compares the lecture notes for machine learning in round seven"
+sample_0028.wav,"the researcher improves the lecture notes for machine learning in round eight"
+sample_0029.wav,"the researcher documents the lecture notes for machine learning in round nine"
+sample_0030.wav,"the researcher verifies the lecture notes for machine learning in round ten"
+sample_0031.wav,"the engineer reviews the lecture notes for machine learning in round one"
+sample_0032.wav,"the engineer summarizes the lecture notes for machine learning in round two"
+sample_0033.wav,"the engineer explains the lecture notes for machine learning in round three"
+sample_0034.wav,"the engineer records the lecture notes for machine learning in round four"
+sample_0035.wav,"the engineer tests the lecture notes for machine learning in round five"
+sample_0036.wav,"the engineer organizes the lecture notes for machine learning in round six"
+sample_0037.wav,"the engineer compares the lecture notes for machine learning in round seven"
+sample_0038.wav,"the engineer improves the lecture notes for machine learning in round eight"
+sample_0039.wav,"the engineer documents the lecture notes for machine learning in round nine"
+sample_0040.wav,"the engineer verifies the lecture notes for machine learning in round ten"
+sample_0041.wav,"the team reviews the lecture notes for machine learning in round one"
+sample_0042.wav,"the team summarizes the lecture notes for machine learning in round two"
+sample_0043.wav,"the team explains the lecture notes for machine learning in round three"
+sample_0044.wav,"the team records the lecture notes for machine learning in round four"
+sample_0045.wav,"the team tests the lecture notes for machine learning in round five"
+sample_0046.wav,"the team organizes the lecture notes for machine learning in round six"
+sample_0047.wav,"the team compares the lecture notes for machine learning in round seven"
+sample_0048.wav,"the team improves the lecture notes for machine learning in round eight"
+sample_0049.wav,"the team documents the lecture notes for machine learning in round nine"
+sample_0050.wav,"the team verifies the lecture notes for machine learning in round ten"
+sample_0051.wav,"the developer reviews the lecture notes for machine learning in round one"
+sample_0052.wav,"the developer summarizes the lecture notes for machine learning in round two"
+sample_0053.wav,"the developer explains the lecture notes for machine learning in round three"
+sample_0054.wav,"the developer records the lecture notes for machine learning in round four"
+sample_0055.wav,"the developer tests the lecture notes for machine learning in round five"
+sample_0056.wav,"the developer organizes the lecture notes for machine learning in round six"
+sample_0057.wav,"the developer compares the lecture notes for machine learning in round seven"
+sample_0058.wav,"the developer improves the lecture notes for machine learning in round eight"
+sample_0059.wav,"the developer documents the lecture notes for machine learning in round nine"
+sample_0060.wav,"the developer verifies the lecture notes for machine learning in round ten"
+sample_0061.wav,"the analyst reviews the lecture notes for machine learning in round one"
+sample_0062.wav,"the analyst summarizes the lecture notes for machine learning in round two"
+sample_0063.wav,"the analyst explains the lecture notes for machine learning in round three"
+sample_0064.wav,"the analyst records the lecture notes for machine learning in round four"
+sample_0065.wav,"the analyst tests the lecture notes for machine learning in round five"
+sample_0066.wav,"the analyst organizes the lecture notes for machine learning in round six"
+sample_0067.wav,"the analyst compares the lecture notes for machine learning in round seven"
+sample_0068.wav,"the analyst improves the lecture notes for machine learning in round eight"
+sample_0069.wav,"the analyst documents the lecture notes for machine learning in round nine"
+sample_0070.wav,"the analyst verifies the lecture notes for machine learning in round ten"
+sample_0071.wav,"the professor reviews the lecture notes for machine learning in round one"
+sample_0072.wav,"the professor summarizes the lecture notes for machine learning in round two"
+sample_0073.wav,"the professor explains the lecture notes for machine learning in round three"
+sample_0074.wav,"the professor records the lecture notes for machine learning in round four"
+sample_0075.wav,"the professor tests the lecture notes for machine learning in round five"
+sample_0076.wav,"the professor organizes the lecture notes for machine learning in round six"
+sample_0077.wav,"the professor compares the lecture notes for machine learning in round seven"
+sample_0078.wav,"the professor improves the lecture notes for machine learning in round eight"
+sample_0079.wav,"the professor documents the lecture notes for machine learning in round nine"
+sample_0080.wav,"the professor verifies the lecture notes for machine learning in round ten"
+sample_0081.wav,"the presenter reviews the lecture notes for machine learning in round one"
+sample_0082.wav,"the presenter summarizes the lecture notes for machine learning in round two"
+sample_0083.wav,"the presenter explains the lecture notes for machine learning in round three"
+sample_0084.wav,"the presenter records the lecture notes for machine learning in round four"
+sample_0085.wav,"the presenter tests the lecture notes for machine learning in round five"
+sample_0086.wav,"the presenter organizes the lecture notes for machine learning in round six"
+sample_0087.wav,"the presenter compares the lecture notes for machine learning in round seven"
+sample_0088.wav,"the presenter improves the lecture notes for machine learning in round eight"
+sample_0089.wav,"the presenter documents the lecture notes for machine learning in round nine"
+sample_0090.wav,"the presenter verifies the lecture notes for machine learning in round ten"
+sample_0091.wav,"the project manager reviews the lecture notes for machine learning in round one"
+sample_0092.wav,"the project manager summarizes the lecture notes for machine learning in round two"
+sample_0093.wav,"the project manager explains the lecture notes for machine learning in round three"
+sample_0094.wav,"the project manager records the lecture notes for machine learning in round four"
+sample_0095.wav,"the project manager tests the lecture notes for machine learning in round five"
+sample_0096.wav,"the project manager organizes the lecture notes for machine learning in round six"
+sample_0097.wav,"the project manager compares the lecture notes for machine learning in round seven"
+sample_0098.wav,"the project manager improves the lecture notes for machine learning in round eight"
+sample_0099.wav,"the project manager documents the lecture notes for machine learning in round nine"
+sample_0100.wav,"the project manager verifies the lecture notes for machine learning in round ten"
+sample_0101.wav,"the student reviews the meeting action items for this week in round eleven"
+sample_0102.wav,"the student summarizes the meeting action items for this week in round twelve"
+sample_0103.wav,"the student explains the meeting action items for this week in round thirteen"
+sample_0104.wav,"the student records the meeting action items for this week in round fourteen"
+sample_0105.wav,"the student tests the meeting action items for this week in round fifteen"
+sample_0106.wav,"the student organizes the meeting action items for this week in round sixteen"
+sample_0107.wav,"the student compares the meeting action items for this week in round seventeen"
+sample_0108.wav,"the student improves the meeting action items for this week in round eighteen"
+sample_0109.wav,"the student documents the meeting action items for this week in round nineteen"
+sample_0110.wav,"the student verifies the meeting action items for this week in round twenty"
+sample_0111.wav,"the lecturer reviews the meeting action items for this week in round eleven"
+sample_0112.wav,"the lecturer summarizes the meeting action items for this week in round twelve"
+sample_0113.wav,"the lecturer explains the meeting action items for this week in round thirteen"
+sample_0114.wav,"the lecturer records the meeting action items for this week in round fourteen"
+sample_0115.wav,"the lecturer tests the meeting action items for this week in round fifteen"
+sample_0116.wav,"the lecturer organizes the meeting action items for this week in round sixteen"
+sample_0117.wav,"the lecturer compares the meeting action items for this week in round seventeen"
+sample_0118.wav,"the lecturer improves the meeting action items for this week in round eighteen"
+sample_0119.wav,"the lecturer documents the meeting action items for this week in round nineteen"
+sample_0120.wav,"the lecturer verifies the meeting action items for this week in round twenty"
+sample_0121.wav,"the researcher reviews the meeting action items for this week in round eleven"
+sample_0122.wav,"the researcher summarizes the meeting action items for this week in round twelve"
+sample_0123.wav,"the researcher explains the meeting action items for this week in round thirteen"
+sample_0124.wav,"the researcher records the meeting action items for this week in round fourteen"
+sample_0125.wav,"the researcher tests the meeting action items for this week in round fifteen"
+sample_0126.wav,"the researcher organizes the meeting action items for this week in round sixteen"
+sample_0127.wav,"the researcher compares the meeting action items for this week in round seventeen"
+sample_0128.wav,"the researcher improves the meeting action items for this week in round eighteen"
+sample_0129.wav,"the researcher documents the meeting action items for this week in round nineteen"
+sample_0130.wav,"the researcher verifies the meeting action items for this week in round twenty"
+sample_0131.wav,"the engineer reviews the meeting action items for this week in round eleven"
+sample_0132.wav,"the engineer summarizes the meeting action items for this week in round twelve"
+sample_0133.wav,"the engineer explains the meeting action items for this week in round thirteen"
+sample_0134.wav,"the engineer records the meeting action items for this week in round fourteen"
+sample_0135.wav,"the engineer tests the meeting action items for this week in round fifteen"
+sample_0136.wav,"the engineer organizes the meeting action items for this week in round sixteen"
+sample_0137.wav,"the engineer compares the meeting action items for this week in round seventeen"
+sample_0138.wav,"the engineer improves the meeting action items for this week in round eighteen"
+sample_0139.wav,"the engineer documents the meeting action items for this week in round nineteen"
+sample_0140.wav,"the engineer verifies the meeting action items for this week in round twenty"
+sample_0141.wav,"the team reviews the meeting action items for this week in round eleven"
+sample_0142.wav,"the team summarizes the meeting action items for this week in round twelve"
+sample_0143.wav,"the team explains the meeting action items for this week in round thirteen"
+sample_0144.wav,"the team records the meeting action items for this week in round fourteen"
+sample_0145.wav,"the team tests the meeting action items for this week in round fifteen"
+sample_0146.wav,"the team organizes the meeting action items for this week in round sixteen"
+sample_0147.wav,"the team compares the meeting action items for this week in round seventeen"
+sample_0148.wav,"the team improves the meeting action items for this week in round eighteen"
+sample_0149.wav,"the team documents the meeting action items for this week in round nineteen"
+sample_0150.wav,"the team verifies the meeting action items for this week in round twenty"
+sample_0151.wav,"the developer reviews the meeting action items for this week in round eleven"
+sample_0152.wav,"the developer summarizes the meeting action items for this week in round twelve"
+sample_0153.wav,"the developer explains the meeting action items for this week in round thirteen"
+sample_0154.wav,"the developer records the meeting action items for this week in round fourteen"
+sample_0155.wav,"the developer tests the meeting action items for this week in round fifteen"
+sample_0156.wav,"the developer organizes the meeting action items for this week in round sixteen"
+sample_0157.wav,"the developer compares the meeting action items for this week in round seventeen"
+sample_0158.wav,"the developer improves the meeting action items for this week in round eighteen"
+sample_0159.wav,"the developer documents the meeting action items for this week in round nineteen"
+sample_0160.wav,"the developer verifies the meeting action items for this week in round twenty"
+sample_0161.wav,"the analyst reviews the meeting action items for this week in round eleven"
+sample_0162.wav,"the analyst summarizes the meeting action items for this week in round twelve"
+sample_0163.wav,"the analyst explains the meeting action items for this week in round thirteen"
+sample_0164.wav,"the analyst records the meeting action items for this week in round fourteen"
+sample_0165.wav,"the analyst tests the meeting action items for this week in round fifteen"
+sample_0166.wav,"the analyst organizes the meeting action items for this week in round sixteen"
+sample_0167.wav,"the analyst compares the meeting action items for this week in round seventeen"
+sample_0168.wav,"the analyst improves the meeting action items for this week in round eighteen"
+sample_0169.wav,"the analyst documents the meeting action items for this week in round nineteen"
+sample_0170.wav,"the analyst verifies the meeting action items for this week in round twenty"
+sample_0171.wav,"the professor reviews the meeting action items for this week in round eleven"
+sample_0172.wav,"the professor summarizes the meeting action items for this week in round twelve"
+sample_0173.wav,"the professor explains the meeting action items for this week in round thirteen"
+sample_0174.wav,"the professor records the meeting action items for this week in round fourteen"
+sample_0175.wav,"the professor tests the meeting action items for this week in round fifteen"
+sample_0176.wav,"the professor organizes the meeting action items for this week in round sixteen"
+sample_0177.wav,"the professor compares the meeting action items for this week in round seventeen"
+sample_0178.wav,"the professor improves the meeting action items for this week in round eighteen"
+sample_0179.wav,"the professor documents the meeting action items for this week in round nineteen"
+sample_0180.wav,"the professor verifies the meeting action items for this week in round twenty"
+sample_0181.wav,"the presenter reviews the meeting action items for this week in round eleven"
+sample_0182.wav,"the presenter summarizes the meeting action items for this week in round twelve"
+sample_0183.wav,"the presenter explains the meeting action items for this week in round thirteen"
+sample_0184.wav,"the presenter records the meeting action items for this week in round fourteen"
+sample_0185.wav,"the presenter tests the meeting action items for this week in round fifteen"
+sample_0186.wav,"the presenter organizes the meeting action items for this week in round sixteen"
+sample_0187.wav,"the presenter compares the meeting action items for this week in round seventeen"
+sample_0188.wav,"the presenter improves the meeting action items for this week in round eighteen"
+sample_0189.wav,"the presenter documents the meeting action items for this week in round nineteen"
+sample_0190.wav,"the presenter verifies the meeting action items for this week in round twenty"
+sample_0191.wav,"the project manager reviews the meeting action items for this week in round eleven"
+sample_0192.wav,"the project manager summarizes the meeting action items for this week in round twelve"
+sample_0193.wav,"the project manager explains the meeting action items for this week in round thirteen"
+sample_0194.wav,"the project manager records the meeting action items for this week in round fourteen"
+sample_0195.wav,"the project manager tests the meeting action items for this week in round fifteen"
+sample_0196.wav,"the project manager organizes the meeting action items for this week in round sixteen"
+sample_0197.wav,"the project manager compares the meeting action items for this week in round seventeen"
+sample_0198.wav,"the project manager improves the meeting action items for this week in round eighteen"
+sample_0199.wav,"the project manager documents the meeting action items for this week in round nineteen"
+sample_0200.wav,"the project manager verifies the meeting action items for this week in round twenty"
+sample_0201.wav,"the student reviews the code changes before release in round twenty one"
+sample_0202.wav,"the student summarizes the code changes before release in round twenty two"
+sample_0203.wav,"the student explains the code changes before release in round twenty three"
+sample_0204.wav,"the student records the code changes before release in round twenty four"
+sample_0205.wav,"the student tests the code changes before release in round twenty five"
+sample_0206.wav,"the student organizes the code changes before release in round "
+sample_0207.wav,"the student compares the code changes before release in round "
+sample_0208.wav,"the student improves the code changes before release in round "
+sample_0209.wav,"the student documents the code changes before release in round "
+sample_0210.wav,"the student verifies the code changes before release in round "
+sample_0211.wav,"the lecturer reviews the code changes before release in round twenty one"
+sample_0212.wav,"the lecturer summarizes the code changes before release in round twenty two"
+sample_0213.wav,"the lecturer explains the code changes before release in round twenty three"
+sample_0214.wav,"the lecturer records the code changes before release in round twenty four"
+sample_0215.wav,"the lecturer tests the code changes before release in round twenty five"
+sample_0216.wav,"the lecturer organizes the code changes before release in round "
+sample_0217.wav,"the lecturer compares the code changes before release in round "
+sample_0218.wav,"the lecturer improves the code changes before release in round "
+sample_0219.wav,"the lecturer documents the code changes before release in round "
+sample_0220.wav,"the lecturer verifies the code changes before release in round "
+sample_0221.wav,"the researcher reviews the code changes before release in round twenty one"
+sample_0222.wav,"the researcher summarizes the code changes before release in round twenty two"
+sample_0223.wav,"the researcher explains the code changes before release in round twenty three"
+sample_0224.wav,"the researcher records the code changes before release in round twenty four"
+sample_0225.wav,"the researcher tests the code changes before release in round twenty five"
+sample_0226.wav,"the researcher organizes the code changes before release in round "
+sample_0227.wav,"the researcher compares the code changes before release in round "
+sample_0228.wav,"the researcher improves the code changes before release in round "
+sample_0229.wav,"the researcher documents the code changes before release in round "
+sample_0230.wav,"the researcher verifies the code changes before release in round "
+sample_0231.wav,"the engineer reviews the code changes before release in round twenty one"
+sample_0232.wav,"the engineer summarizes the code changes before release in round twenty two"
+sample_0233.wav,"the engineer explains the code changes before release in round twenty three"
+sample_0234.wav,"the engineer records the code changes before release in round twenty four"
+sample_0235.wav,"the engineer tests the code changes before release in round twenty five"
+sample_0236.wav,"the engineer organizes the code changes before release in round "
+sample_0237.wav,"the engineer compares the code changes before release in round "
+sample_0238.wav,"the engineer improves the code changes before release in round "
+sample_0239.wav,"the engineer documents the code changes before release in round "
+sample_0240.wav,"the engineer verifies the code changes before release in round "
+sample_0241.wav,"the team reviews the code changes before release in round twenty one"
+sample_0242.wav,"the team summarizes the code changes before release in round twenty two"
+sample_0243.wav,"the team explains the code changes before release in round twenty three"
+sample_0244.wav,"the team records the code changes before release in round twenty four"
+sample_0245.wav,"the team tests the code changes before release in round twenty five"
+sample_0246.wav,"the team organizes the code changes before release in round "
+sample_0247.wav,"the team compares the code changes before release in round "
+sample_0248.wav,"the team improves the code changes before release in round "
+sample_0249.wav,"the team documents the code changes before release in round "
+sample_0250.wav,"the team verifies the code changes before release in round "
+sample_0251.wav,"the developer reviews the code changes before release in round twenty one"
+sample_0252.wav,"the developer summarizes the code changes before release in round twenty two"
+sample_0253.wav,"the developer explains the code changes before release in round twenty three"
+sample_0254.wav,"the developer records the code changes before release in round twenty four"
+sample_0255.wav,"the developer tests the code changes before release in round twenty five"
+sample_0256.wav,"the developer organizes the code changes before release in round "
+sample_0257.wav,"the developer compares the code changes before release in round "
+sample_0258.wav,"the developer improves the code changes before release in round "
+sample_0259.wav,"the developer documents the code changes before release in round "
+sample_0260.wav,"the developer verifies the code changes before release in round "
+sample_0261.wav,"the analyst reviews the code changes before release in round twenty one"
+sample_0262.wav,"the analyst summarizes the code changes before release in round twenty two"
+sample_0263.wav,"the analyst explains the code changes before release in round twenty three"
+sample_0264.wav,"the analyst records the code changes before release in round twenty four"
+sample_0265.wav,"the analyst tests the code changes before release in round twenty five"
+sample_0266.wav,"the analyst organizes the code changes before release in round "
+sample_0267.wav,"the analyst compares the code changes before release in round "
+sample_0268.wav,"the analyst improves the code changes before release in round "
+sample_0269.wav,"the analyst documents the code changes before release in round "
+sample_0270.wav,"the analyst verifies the code changes before release in round "
+sample_0271.wav,"the professor reviews the code changes before release in round twenty one"
+sample_0272.wav,"the professor summarizes the code changes before release in round twenty two"
+sample_0273.wav,"the professor explains the code changes before release in round twenty three"
+sample_0274.wav,"the professor records the code changes before release in round twenty four"
+sample_0275.wav,"the professor tests the code changes before release in round twenty five"
+sample_0276.wav,"the professor organizes the code changes before release in round "
+sample_0277.wav,"the professor compares the code changes before release in round "
+sample_0278.wav,"the professor improves the code changes before release in round "
+sample_0279.wav,"the professor documents the code changes before release in round "
+sample_0280.wav,"the professor verifies the code changes before release in round "
+sample_0281.wav,"the presenter reviews the code changes before release in round twenty one"
+sample_0282.wav,"the presenter summarizes the code changes before release in round twenty two"
+sample_0283.wav,"the presenter explains the code changes before release in round twenty three"
+sample_0284.wav,"the presenter records the code changes before release in round twenty four"
+sample_0285.wav,"the presenter tests the code changes before release in round twenty five"
+sample_0286.wav,"the presenter organizes the code changes before release in round "
+sample_0287.wav,"the presenter compares the code changes before release in round "
+sample_0288.wav,"the presenter improves the code changes before release in round "
+sample_0289.wav,"the presenter documents the code changes before release in round "
+sample_0290.wav,"the presenter verifies the code changes before release in round "
+sample_0291.wav,"the project manager reviews the code changes before release in round twenty one"
+sample_0292.wav,"the project manager summarizes the code changes before release in round twenty two"
+sample_0293.wav,"the project manager explains the code changes before release in round twenty three"
+sample_0294.wav,"the project manager records the code changes before release in round twenty four"
+sample_0295.wav,"the project manager tests the code changes before release in round twenty five"
+sample_0296.wav,"the project manager organizes the code changes before release in round "
+sample_0297.wav,"the project manager compares the code changes before release in round "
+sample_0298.wav,"the project manager improves the code changes before release in round "
+sample_0299.wav,"the project manager documents the code changes before release in round "
+sample_0300.wav,"the project manager verifies the code changes before release in round "
+sample_0301.wav,"the student reviews the model training results from today in round "
+sample_0302.wav,"the student summarizes the model training results from today in round "
+sample_0303.wav,"the student explains the model training results from today in round "
+sample_0304.wav,"the student records the model training results from today in round "
+sample_0305.wav,"the student tests the model training results from today in round "
+sample_0306.wav,"the student organizes the model training results from today in round "
+sample_0307.wav,"the student compares the model training results from today in round "
+sample_0308.wav,"the student improves the model training results from today in round "
+sample_0309.wav,"the student documents the model training results from today in round "
+sample_0310.wav,"the student verifies the model training results from today in round "
+sample_0311.wav,"the lecturer reviews the model training results from today in round "
+sample_0312.wav,"the lecturer summarizes the model training results from today in round "
+sample_0313.wav,"the lecturer explains the model training results from today in round "
+sample_0314.wav,"the lecturer records the model training results from today in round "
+sample_0315.wav,"the lecturer tests the model training results from today in round "
+sample_0316.wav,"the lecturer organizes the model training results from today in round "
+sample_0317.wav,"the lecturer compares the model training results from today in round "
+sample_0318.wav,"the lecturer improves the model training results from today in round "
+sample_0319.wav,"the lecturer documents the model training results from today in round "
+sample_0320.wav,"the lecturer verifies the model training results from today in round "
+sample_0321.wav,"the researcher reviews the model training results from today in round "
+sample_0322.wav,"the researcher summarizes the model training results from today in round "
+sample_0323.wav,"the researcher explains the model training results from today in round "
+sample_0324.wav,"the researcher records the model training results from today in round "
+sample_0325.wav,"the researcher tests the model training results from today in round "
+sample_0326.wav,"the researcher organizes the model training results from today in round "
+sample_0327.wav,"the researcher compares the model training results from today in round "
+sample_0328.wav,"the researcher improves the model training results from today in round "
+sample_0329.wav,"the researcher documents the model training results from today in round "
+sample_0330.wav,"the researcher verifies the model training results from today in round "
+sample_0331.wav,"the engineer reviews the model training results from today in round "
+sample_0332.wav,"the engineer summarizes the model training results from today in round "
+sample_0333.wav,"the engineer explains the model training results from today in round "
+sample_0334.wav,"the engineer records the model training results from today in round "
+sample_0335.wav,"the engineer tests the model training results from today in round "
+sample_0336.wav,"the engineer organizes the model training results from today in round "
+sample_0337.wav,"the engineer compares the model training results from today in round "
+sample_0338.wav,"the engineer improves the model training results from today in round "
+sample_0339.wav,"the engineer documents the model training results from today in round "
+sample_0340.wav,"the engineer verifies the model training results from today in round "
+sample_0341.wav,"the team reviews the model training results from today in round "
+sample_0342.wav,"the team summarizes the model training results from today in round "
+sample_0343.wav,"the team explains the model training results from today in round "
+sample_0344.wav,"the team records the model training results from today in round "
+sample_0345.wav,"the team tests the model training results from today in round "
+sample_0346.wav,"the team organizes the model training results from today in round "
+sample_0347.wav,"the team compares the model training results from today in round "
+sample_0348.wav,"the team improves the model training results from today in round "
+sample_0349.wav,"the team documents the model training results from today in round "
+sample_0350.wav,"the team verifies the model training results from today in round "
+sample_0351.wav,"the developer reviews the model training results from today in round "
+sample_0352.wav,"the developer summarizes the model training results from today in round "
+sample_0353.wav,"the developer explains the model training results from today in round "
+sample_0354.wav,"the developer records the model training results from today in round "
+sample_0355.wav,"the developer tests the model training results from today in round "
+sample_0356.wav,"the developer organizes the model training results from today in round "
+sample_0357.wav,"the developer compares the model training results from today in round "
+sample_0358.wav,"the developer improves the model training results from today in round "
+sample_0359.wav,"the developer documents the model training results from today in round "
+sample_0360.wav,"the developer verifies the model training results from today in round "
+sample_0361.wav,"the analyst reviews the model training results from today in round "
+sample_0362.wav,"the analyst summarizes the model training results from today in round "
+sample_0363.wav,"the analyst explains the model training results from today in round "
+sample_0364.wav,"the analyst records the model training results from today in round "
+sample_0365.wav,"the analyst tests the model training results from today in round "
+sample_0366.wav,"the analyst organizes the model training results from today in round "
+sample_0367.wav,"the analyst compares the model training results from today in round "
+sample_0368.wav,"the analyst improves the model training results from today in round "
+sample_0369.wav,"the analyst documents the model training results from today in round "
+sample_0370.wav,"the analyst verifies the model training results from today in round "
+sample_0371.wav,"the professor reviews the model training results from today in round "
+sample_0372.wav,"the professor summarizes the model training results from today in round "
+sample_0373.wav,"the professor explains the model training results from today in round "
+sample_0374.wav,"the professor records the model training results from today in round "
+sample_0375.wav,"the professor tests the model training results from today in round "
+sample_0376.wav,"the professor organizes the model training results from today in round "
+sample_0377.wav,"the professor compares the model training results from today in round "
+sample_0378.wav,"the professor improves the model training results from today in round "
+sample_0379.wav,"the professor documents the model training results from today in round "
+sample_0380.wav,"the professor verifies the model training results from today in round "
+sample_0381.wav,"the presenter reviews the model training results from today in round "
+sample_0382.wav,"the presenter summarizes the model training results from today in round "
+sample_0383.wav,"the presenter explains the model training results from today in round "
+sample_0384.wav,"the presenter records the model training results from today in round "
+sample_0385.wav,"the presenter tests the model training results from today in round "
+sample_0386.wav,"the presenter organizes the model training results from today in round "
+sample_0387.wav,"the presenter compares the model training results from today in round "
+sample_0388.wav,"the presenter improves the model training results from today in round "
+sample_0389.wav,"the presenter documents the model training results from today in round "
+sample_0390.wav,"the presenter verifies the model training results from today in round "
+sample_0391.wav,"the project manager reviews the model training results from today in round "
+sample_0392.wav,"the project manager summarizes the model training results from today in round "
+sample_0393.wav,"the project manager explains the model training results from today in round "
+sample_0394.wav,"the project manager records the model training results from today in round "
+sample_0395.wav,"the project manager tests the model training results from today in round "
+sample_0396.wav,"the project manager organizes the model training results from today in round "
+sample_0397.wav,"the project manager compares the model training results from today in round "
+sample_0398.wav,"the project manager improves the model training results from today in round "
+sample_0399.wav,"the project manager documents the model training results from today in round "
+sample_0400.wav,"the project manager verifies the model training results from today in round "
+sample_0401.wav,"the student reviews the project timeline and next milestones in round "
+sample_0402.wav,"the student summarizes the project timeline and next milestones in round "
+sample_0403.wav,"the student explains the project timeline and next milestones in round "
+sample_0404.wav,"the student records the project timeline and next milestones in round "
+sample_0405.wav,"the student tests the project timeline and next milestones in round "
+sample_0406.wav,"the student organizes the project timeline and next milestones in round "
+sample_0407.wav,"the student compares the project timeline and next milestones in round "
+sample_0408.wav,"the student improves the project timeline and next milestones in round "
+sample_0409.wav,"the student documents the project timeline and next milestones in round "
+sample_0410.wav,"the student verifies the project timeline and next milestones in round "
+sample_0411.wav,"the lecturer reviews the project timeline and next milestones in round "
+sample_0412.wav,"the lecturer summarizes the project timeline and next milestones in round "
+sample_0413.wav,"the lecturer explains the project timeline and next milestones in round "
+sample_0414.wav,"the lecturer records the project timeline and next milestones in round "
+sample_0415.wav,"the lecturer tests the project timeline and next milestones in round "
+sample_0416.wav,"the lecturer organizes the project timeline and next milestones in round "
+sample_0417.wav,"the lecturer compares the project timeline and next milestones in round "
+sample_0418.wav,"the lecturer improves the project timeline and next milestones in round "
+sample_0419.wav,"the lecturer documents the project timeline and next milestones in round "
+sample_0420.wav,"the lecturer verifies the project timeline and next milestones in round "
+sample_0421.wav,"the researcher reviews the project timeline and next milestones in round "
+sample_0422.wav,"the researcher summarizes the project timeline and next milestones in round "
+sample_0423.wav,"the researcher explains the project timeline and next milestones in round "
+sample_0424.wav,"the researcher records the project timeline and next milestones in round "
+sample_0425.wav,"the researcher tests the project timeline and next milestones in round "
+sample_0426.wav,"the researcher organizes the project timeline and next milestones in round "
+sample_0427.wav,"the researcher compares the project timeline and next milestones in round "
+sample_0428.wav,"the researcher improves the project timeline and next milestones in round "
+sample_0429.wav,"the researcher documents the project timeline and next milestones in round "
+sample_0430.wav,"the researcher verifies the project timeline and next milestones in round "
+sample_0431.wav,"the engineer reviews the project timeline and next milestones in round "
+sample_0432.wav,"the engineer summarizes the project timeline and next milestones in round "
+sample_0433.wav,"the engineer explains the project timeline and next milestones in round "
+sample_0434.wav,"the engineer records the project timeline and next milestones in round "
+sample_0435.wav,"the engineer tests the project timeline and next milestones in round "
+sample_0436.wav,"the engineer organizes the project timeline and next milestones in round "
+sample_0437.wav,"the engineer compares the project timeline and next milestones in round "
+sample_0438.wav,"the engineer improves the project timeline and next milestones in round "
+sample_0439.wav,"the engineer documents the project timeline and next milestones in round "
+sample_0440.wav,"the engineer verifies the project timeline and next milestones in round "
+sample_0441.wav,"the team reviews the project timeline and next milestones in round "
+sample_0442.wav,"the team summarizes the project timeline and next milestones in round "
+sample_0443.wav,"the team explains the project timeline and next milestones in round "
+sample_0444.wav,"the team records the project timeline and next milestones in round "
+sample_0445.wav,"the team tests the project timeline and next milestones in round "
+sample_0446.wav,"the team organizes the project timeline and next milestones in round "
+sample_0447.wav,"the team compares the project timeline and next milestones in round "
+sample_0448.wav,"the team improves the project timeline and next milestones in round "
+sample_0449.wav,"the team documents the project timeline and next milestones in round "
+sample_0450.wav,"the team verifies the project timeline and next milestones in round "
+sample_0451.wav,"the developer reviews the project timeline and next milestones in round "
+sample_0452.wav,"the developer summarizes the project timeline and next milestones in round "
+sample_0453.wav,"the developer explains the project timeline and next milestones in round "
+sample_0454.wav,"the developer records the project timeline and next milestones in round "
+sample_0455.wav,"the developer tests the project timeline and next milestones in round "
+sample_0456.wav,"the developer organizes the project timeline and next milestones in round "
+sample_0457.wav,"the developer compares the project timeline and next milestones in round "
+sample_0458.wav,"the developer improves the project timeline and next milestones in round "
+sample_0459.wav,"the developer documents the project timeline and next milestones in round "
+sample_0460.wav,"the developer verifies the project timeline and next milestones in round "
+sample_0461.wav,"the analyst reviews the project timeline and next milestones in round "
+sample_0462.wav,"the analyst summarizes the project timeline and next milestones in round "
+sample_0463.wav,"the analyst explains the project timeline and next milestones in round "
+sample_0464.wav,"the analyst records the project timeline and next milestones in round "
+sample_0465.wav,"the analyst tests the project timeline and next milestones in round "
+sample_0466.wav,"the analyst organizes the project timeline and next milestones in round "
+sample_0467.wav,"the analyst compares the project timeline and next milestones in round "
+sample_0468.wav,"the analyst improves the project timeline and next milestones in round "
+sample_0469.wav,"the analyst documents the project timeline and next milestones in round "
+sample_0470.wav,"the analyst verifies the project timeline and next milestones in round "
+sample_0471.wav,"the professor reviews the project timeline and next milestones in round "
+sample_0472.wav,"the professor summarizes the project timeline and next milestones in round "
+sample_0473.wav,"the professor explains the project timeline and next milestones in round "
+sample_0474.wav,"the professor records the project timeline and next milestones in round "
+sample_0475.wav,"the professor tests the project timeline and next milestones in round "
+sample_0476.wav,"the professor organizes the project timeline and next milestones in round "
+sample_0477.wav,"the professor compares the project timeline and next milestones in round "
+sample_0478.wav,"the professor improves the project timeline and next milestones in round "
+sample_0479.wav,"the professor documents the project timeline and next milestones in round "
+sample_0480.wav,"the professor verifies the project timeline and next milestones in round "
+sample_0481.wav,"the presenter reviews the project timeline and next milestones in round "
+sample_0482.wav,"the presenter summarizes the project timeline and next milestones in round "
+sample_0483.wav,"the presenter explains the project timeline and next milestones in round "
+sample_0484.wav,"the presenter records the project timeline and next milestones in round "
+sample_0485.wav,"the presenter tests the project timeline and next milestones in round "
+sample_0486.wav,"the presenter organizes the project timeline and next milestones in round "
+sample_0487.wav,"the presenter compares the project timeline and next milestones in round "
+sample_0488.wav,"the presenter improves the project timeline and next milestones in round "
+sample_0489.wav,"the presenter documents the project timeline and next milestones in round "
+sample_0490.wav,"the presenter verifies the project timeline and next milestones in round "
+sample_0491.wav,"the project manager reviews the project timeline and next milestones in round "
+sample_0492.wav,"the project manager summarizes the project timeline and next milestones in round "
+sample_0493.wav,"the project manager explains the project timeline and next milestones in round "
+sample_0494.wav,"the project manager records the project timeline and next milestones in round "
+sample_0495.wav,"the project manager tests the project timeline and next milestones in round "
+sample_0496.wav,"the project manager organizes the project timeline and next milestones in round "
+sample_0497.wav,"the project manager compares the project timeline and next milestones in round "
+sample_0498.wav,"the project manager improves the project timeline and next milestones in round "
+sample_0499.wav,"the project manager documents the project timeline and next milestones in round "
+sample_0500.wav,"the project manager verifies the project timeline and next milestones in round "
