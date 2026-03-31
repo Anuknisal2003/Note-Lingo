@@ -1,0 +1,10 @@
+{
+  "model_name": "facebook/bart-base",
+  "max_input": 512,
+  "max_target": 128,
+  "train_samples": 8000,
+  "val_samples": 500,
+  "epochs": 3,
+  "training_time_minutes": 24.5,
+  "device": "cuda"
+}
