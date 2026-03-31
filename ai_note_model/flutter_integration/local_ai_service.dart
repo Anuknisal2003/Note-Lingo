@@ -8,6 +8,7 @@
 
 import 'dart:io';
 import 'dart:convert';
+// ignore: uri_does_not_exist
 import 'package:http/http.dart' as http;
 
 class LocalAiService {
