@@ -1,286 +1,274 @@
 // lib/providers/recording_provider.dart
-//
-// Recording pipeline using YOUR LOCAL AI MODEL only.
-// No OpenAI API keys needed.
-//
-// Pipeline:
-//   1. Record audio (.m4a)
-//   2. Upload to Firebase Storage (optional)
-//   3. Transcribe with YOUR Wav2Vec2 model (Flask API)
-//   4. Generate summary locally (no GPT needed)
-//   5. Extract keywords locally
-//   6. Create NoteModel → hand off to NotesProvider
+// Full pipeline: Record → Whisper transcribe → Custom BART summarise → Save
+// NO OpenAI. NO API keys. 100% local.
 
-import 'dart:async';
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
-import 'package:uuid/uuid.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/note_model.dart';
-import '../services/storage_service.dart';
 import '../services/local_ai_service.dart';
 
-enum PipelineStep {
-  idle,
-  uploading,
-  transcribing,
-  summarizing,
-  keywords,
-  title,
-  done,
-}
+enum RecordingStatus { idle, recording, processing, done, error }
 
 class RecordingProvider extends ChangeNotifier {
-  // ── Internal ─────────────────────────────────────────────────
-  final AudioRecorder _recorder = AudioRecorder();
-  final StorageService _storage = StorageService();
-  final LocalAiService _localAi = LocalAiService();
-  final Uuid _uuid = const Uuid();
-
-  Timer? _timer;
-  String? _audioPath;
-  String? _pendingNoteId;
-
-  // ── State ─────────────────────────────────────────────────────
-  bool _isRecording = false;
+  // ── State ─────────────────────────────────────────────
+  RecordingStatus _status = RecordingStatus.idle;
+  String _statusMsg = '';
+  String _transcript = '';
+  String _summary = ''; // raw summary text
+  SummaryResult? _summaryResult; // full structured result
+  List<String> _keywords = [];
+  String _noteTitle = '';
+  NoteCategory _category = NoteCategory.other;
+  String _language = 'en';
+  bool _isFavorite = false;
+  String? _errorMessage;
+  NoteModel? _savedNote;
+  int _durationSeconds = 0;
   bool _isPaused = false;
-  bool _isProcessing = false;
-  int _seconds = 0;
-  String _liveTranscript = '';
-  String _processingStatus = '';
-  String? _error;
-  NoteModel? _processedNote;
-  double _uploadProgress = 0.0;
+  double _uploadProgress = 0;
+  Timer? _ticker;
 
-  // ── Getters ───────────────────────────────────────────────────
-  bool get isRecording => _isRecording;
+  // ── Internal ──────────────────────────────────────────
+  final AudioRecorder _recorder = AudioRecorder();
+  final LocalAiService _ai = LocalAiService();
+  String? _audioPath;
+
+  // ── Getters ───────────────────────────────────────────
+  RecordingStatus get status => _status;
+  String get statusMsg => _statusMsg;
+  String get transcript => _transcript;
+  String get liveTranscript => _transcript;
+  String get summary => _summary;
+  SummaryResult? get summaryResult => _summaryResult;
+  List<String> get keywords => _keywords;
+  String get noteTitle => _noteTitle;
+  String get category => _category.name;
+  NoteCategory get categoryEnum => _category;
+  String get language => _language;
+  bool get isFavorite => _isFavorite;
+  String? get errorMessage => _errorMessage;
+  String? get error => _errorMessage;
+  NoteModel? get savedNote => _savedNote;
+  NoteModel? get processedNote => _savedNote;
+  bool get isRecording => _status == RecordingStatus.recording;
+  bool get isProcessing => _status == RecordingStatus.processing;
   bool get isPaused => _isPaused;
-  bool get isProcessing => _isProcessing;
-  int get seconds => _seconds;
-  String get liveTranscript => _liveTranscript;
-  String get processingStatus => _processingStatus;
-  String? get error => _error;
-  NoteModel? get processedNote => _processedNote;
+  String get processingStatus => _statusMsg;
   double get uploadProgress => _uploadProgress;
-
   String get formattedTime {
-    final m = _seconds ~/ 60;
-    final s = _seconds % 60;
+    final m = _durationSeconds ~/ 60;
+    final s = _durationSeconds % 60;
     return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  //  RECORDING CONTROLS
-  // ═══════════════════════════════════════════════════════════════
-
-  Future<void> startRecording() async {
-    _error = null;
-    _processedNote = null;
-    _liveTranscript = '';
-    _seconds = 0;
-    _uploadProgress = 0.0;
-
-    final hasPermission = await _recorder.hasPermission();
-    if (!hasPermission) {
-      _error = 'Microphone permission denied. Please allow in Settings.';
-      notifyListeners();
-      return;
-    }
-
-    final dir = await getTemporaryDirectory();
-    _pendingNoteId = _uuid.v4();
-    _audioPath = '${dir.path}/$_pendingNoteId.m4a';
-
-    await _recorder.start(
-      const RecordConfig(
-        encoder: AudioEncoder.aacLc,
-        bitRate: 128000,
-        sampleRate: 44100,
-        numChannels: 1,
-      ),
-      path: _audioPath!,
+  // ── Setters ───────────────────────────────────────────
+  void setCategory(String c) {
+    _category = NoteCategory.values.firstWhere(
+      (e) => e.name == c,
+      orElse: () => NoteCategory.other,
     );
-
-    _isRecording = true;
-    _isPaused = false;
-    _startTimer();
     notifyListeners();
   }
 
-  Future<void> pauseRecording() async {
-    if (!_isRecording || _isPaused) return;
-    await _recorder.pause();
-    _timer?.cancel();
-    _isPaused = true;
+  void setCategoryEnum(NoteCategory c) {
+    _category = c;
     notifyListeners();
   }
 
-  Future<void> resumeRecording() async {
-    if (!_isRecording || !_isPaused) return;
-    await _recorder.resume();
-    _startTimer();
-    _isPaused = false;
+  void setLanguage(String l) {
+    _language = l;
     notifyListeners();
   }
 
-  Future<void> stopRecording({
-    NoteCategory category = NoteCategory.lecture,
-    String language = 'en',
-  }) async {
-    if (!_isRecording) return;
-
-    _timer?.cancel();
-    _isRecording = false;
-    _isPaused = false;
-    _isProcessing = true;
+  void toggleFavorite() {
+    _isFavorite = !_isFavorite;
     notifyListeners();
+  }
 
+  // ── Start recording ───────────────────────────────────
+  Future<void> startRecording() async {
     try {
-      final path = await _recorder.stop();
-      if (path == null || path.isEmpty) {
-        throw Exception('Recording failed — no audio captured.');
-      }
-
-      final audioFile = File(path);
-      final fileSize = await audioFile.length();
-      if (fileSize < 1000) {
-        throw Exception(
-          'Recording too short. Please record at least 2 seconds.',
+      final hasPermission = await _recorder.hasPermission();
+      if (!hasPermission) {
+        _setError(
+          'Microphone permission denied. Please enable it in settings.',
         );
+        return;
       }
 
-      final noteId = _pendingNoteId ?? _uuid.v4();
-      final uid = FirebaseAuth.instance.currentUser?.uid ?? 'anonymous';
-      final dur = _seconds;
+      final dir = await getTemporaryDirectory();
+      _audioPath =
+          '${dir.path}/note_${DateTime.now().millisecondsSinceEpoch}.m4a';
 
-      // ── Step 1: Upload to Firebase Storage (optional) ────────
-      _setStatus('Uploading audio…', PipelineStep.uploading);
-      String? audioUrl;
-      try {
-        audioUrl = await _storage.uploadAudio(
-          audioFile,
-          noteId: noteId,
-          onProgress: (p) {
-            _uploadProgress = p;
-            notifyListeners();
-          },
-        );
-      } catch (e) {
-        debugPrint('Storage upload skipped: $e');
-      }
-
-      // ── Step 2: Transcribe with YOUR local model ──────────────
-      _setStatus('Transcribing with your AI model…', PipelineStep.transcribing);
-
-      final serverRunning = await _localAi.isReachable();
-      if (!serverRunning) {
-        throw Exception(
-          'Local AI server is not running!\n\n'
-          'Start it on your PC:\n'
-          '  py -3.11 flask_api/app.py\n\n'
-          'Then make sure your phone and PC\nare on the same WiFi network.',
-        );
-      }
-
-      final result = await _localAi.transcribe(audioFile);
-      final transcription = result.text;
-
-      if (transcription.isEmpty) {
-        throw Exception(
-          'Could not transcribe audio.\n'
-          'Please speak clearly and try again.\n'
-          'Recording more training samples improves accuracy.',
-        );
-      }
-
-      _liveTranscript = transcription;
-      notifyListeners();
-
-      // ── Step 3: Summary (local, no API) ───────────────────────
-      _setStatus('Generating summary…', PipelineStep.summarizing);
-      final summary = _generateLocalSummary(transcription);
-
-      // ── Step 4: Keywords (local, no API) ──────────────────────
-      _setStatus('Extracting keywords…', PipelineStep.keywords);
-      final keywords = _extractLocalKeywords(transcription);
-
-      // ── Step 5: Title (local, no API) ─────────────────────────
-      _setStatus('Creating title…', PipelineStep.title);
-      final title = _generateLocalTitle(transcription);
-
-      // ── Step 6: Build NoteModel ────────────────────────────────
-      final wordCount = transcription.trim().split(RegExp(r'\s+')).length;
-      final now = DateTime.now();
-
-      _processedNote = NoteModel(
-        id: noteId,
-        userId: uid,
-        title: title,
-        transcription: transcription,
-        summary: summary,
-        language: language,
-        category: category,
-        keywords: keywords,
-        audioUrl: audioUrl,
-        createdAt: now,
-        updatedAt: now,
-        wordCount: wordCount,
-        duration: dur,
-        isFavorite: false,
+      await _recorder.start(
+        RecordConfig(
+          encoder: AudioEncoder.aacLc,
+          bitRate: 128000,
+          sampleRate: 44100,
+        ),
+        path: _audioPath!,
       );
 
-      _setStatus('Done!', PipelineStep.done);
-      try {
-        await audioFile.delete();
-      } catch (_) {}
-    } catch (e) {
-      _error = e.toString();
-    } finally {
-      _isProcessing = false;
+      _status = RecordingStatus.recording;
+      _isPaused = false;
+      _durationSeconds = 0;
+      _statusMsg = 'Recording… tap stop when done';
+      _clearResults();
+      _startTicker();
       notifyListeners();
+    } catch (e) {
+      _setError('Failed to start recording: $e');
     }
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  //  LOCAL HELPERS — runs on device, zero API calls
-  // ═══════════════════════════════════════════════════════════════
+  // ── Stop recording → process ──────────────────────────
+  Future<void> stopRecording({NoteCategory? category, String? language}) async {
+    if (_status != RecordingStatus.recording && !_isPaused) return;
 
-  String _generateLocalSummary(String text) {
-    if (text.isEmpty) return 'No content transcribed.';
-    final sentences = text
-        .split(RegExp(r'(?<=[.!?])\s+'))
-        .where((s) => s.trim().isNotEmpty)
-        .toList();
-    if (sentences.length <= 2) return text;
-    return '${sentences[0]}. ${sentences[1]}.';
+    try {
+      if (category != null) _category = category;
+      if (language != null) _language = language;
+
+      _stopTicker();
+      await _recorder.stop();
+      _isPaused = false;
+      _status = RecordingStatus.processing;
+      _statusMsg = 'Checking AI server…';
+      _uploadProgress = 0.15;
+      notifyListeners();
+
+      await _processAudio();
+    } catch (e) {
+      _setError('Failed to stop recording: $e');
+    }
   }
 
-  List<String> _extractLocalKeywords(String text) {
-    if (text.isEmpty) return [];
-    const stopWords = {
+  // ── Full AI pipeline ──────────────────────────────────
+  Future<void> _processAudio() async {
+    try {
+      final audioFile = File(_audioPath!);
+      if (!await audioFile.exists()) {
+        _setError('Audio file not found. Please try again.');
+        return;
+      }
+
+      // ── Step 1: Check server ──────────────────────────
+      _statusMsg = 'Connecting to AI server…';
+      _uploadProgress = 0.25;
+      notifyListeners();
+
+      final serverUp = await _ai.isServerAvailable();
+      if (!serverUp) {
+        _setError(
+          'AI server not reachable.\n\n'
+          'Start it on your PC:\n'
+          '  py -3.11 flask_api/app.py\n\n'
+          'Make sure phone and PC are on the same Wi-Fi.',
+        );
+        return;
+      }
+
+      // ── Step 2: Transcribe ───────────────
+      _statusMsg = 'Transcribing......';
+      _uploadProgress = 0.45;
+      notifyListeners();
+
+      final text = await _ai.transcribe(audioFile);
+
+      if (text.isEmpty) {
+        _setError('No speech detected. Please speak clearly and try again.');
+        return;
+      }
+      _transcript = text;
+
+      // ── Step 3: Summarise with custom BART ───────────
+      _statusMsg = 'Summarising with custom AI model…';
+      _uploadProgress = 0.7;
+      notifyListeners();
+
+      SummaryResult result;
+      try {
+        result = await _ai.summarise(
+          text,
+          category: _categoryForApi(_category),
+        );
+      } catch (_) {
+        // Fallback: use simple local extraction
+        result = _localFallbackSummary(text);
+      }
+
+      _summaryResult = result;
+      _summary = result.toMarkdown();
+      _keywords = result.keywords;
+      _noteTitle = result.title.isNotEmpty ? result.title : _extractTitle(text);
+
+      // ── Step 4: Save to Firestore ─────────────────────
+      _statusMsg = 'Saving note…';
+      _uploadProgress = 0.9;
+      notifyListeners();
+
+      await _saveNote(audioFile);
+
+      _status = RecordingStatus.done;
+      _statusMsg = 'Note saved successfully!';
+      _uploadProgress = 1;
+      notifyListeners();
+    } catch (e) {
+      _setError('Processing failed: $e');
+    }
+  }
+
+  // ── Local fallback summary ────────────────────────────
+  SummaryResult _localFallbackSummary(String text) {
+    final sentences = text
+        .split(RegExp(r'(?<=[.!?])\s+'))
+        .where((s) => s.trim().length > 10)
+        .toList();
+
+    final overview = sentences.isNotEmpty ? sentences.first : text;
+    final keyPoints = sentences.length > 1
+        ? sentences.sublist(1, sentences.length.clamp(1, 4))
+        : <String>[];
+    final conclusion = sentences.length > 1 ? sentences.last : overview;
+    final keywords = _simpleKeywords(text);
+
+    final styles = {
+      NoteCategory.lecture: ['📚 Lecture Notes', 'Key Concepts'],
+      NoteCategory.meeting: ['🗓️ Meeting Minutes', 'Action Items'],
+      NoteCategory.interview: ['🎙️ Interview Notes', 'Key Responses'],
+      NoteCategory.personal: ['📝 Personal Note', 'Key Points'],
+      NoteCategory.other: ['📄 Note Summary', 'Key Points'],
+    };
+    final style = styles[_category] ?? styles[NoteCategory.other]!;
+
+    return SummaryResult(
+      title: _extractTitle(text),
+      categoryHeading: style[0],
+      overview: overview,
+      keyPoints: keyPoints,
+      pointsLabel: style[1],
+      keywords: keywords,
+      conclusion: conclusion,
+      rawSummary: sentences.take(3).join(' '),
+      method: 'local-fallback',
+    );
+  }
+
+  List<String> _simpleKeywords(String text) {
+    const stop = {
       'the',
       'a',
       'an',
-      'and',
-      'or',
-      'but',
-      'in',
-      'on',
-      'at',
-      'to',
-      'for',
-      'of',
-      'with',
-      'by',
-      'from',
       'is',
       'are',
       'was',
       'were',
       'be',
-      'been',
       'have',
       'has',
       'had',
@@ -291,95 +279,192 @@ class RecordingProvider extends ChangeNotifier {
       'would',
       'could',
       'should',
+      'to',
+      'of',
+      'in',
+      'on',
+      'at',
+      'by',
+      'for',
+      'with',
+      'and',
+      'but',
+      'or',
       'this',
       'that',
+      'i',
+      'you',
       'it',
       'we',
-      'you',
-      'i',
-      'he',
-      'she',
       'they',
       'not',
-      'so',
+      'just',
+      'very',
+      'also',
+      'than',
+      'too',
+      'all',
+      'each',
     };
-    final wordCount = <String, int>{};
-    final words = text
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z\s]'), '')
-        .split(RegExp(r'\s+'));
-    for (final word in words) {
-      if (word.length > 3 && !stopWords.contains(word)) {
-        wordCount[word] = (wordCount[word] ?? 0) + 1;
+    final freq = <String, int>{};
+    for (final w in text.toLowerCase().split(RegExp(r'\W+'))) {
+      if (w.length >= 4 && !stop.contains(w)) {
+        freq[w] = (freq[w] ?? 0) + 1;
       }
     }
-    final sorted = wordCount.entries.toList()
+    final sorted = freq.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
-    return sorted.take(5).map((e) => e.key).toList();
+    return sorted.take(8).map((e) => e.key).toList();
   }
 
-  String _generateLocalTitle(String text) {
-    if (text.isEmpty) return 'New Recording';
-    final words = text.trim().split(RegExp(r'\s+'));
-    final titleWords = words.take(6).map((w) {
-      if (w.isEmpty) return w;
-      return w[0].toUpperCase() + w.substring(1);
-    }).toList();
-    final title = titleWords.join(' ');
-    return words.length > 6 ? '$title…' : title;
+  String _extractTitle(String text) {
+    final words = text.split(' ').take(10).toList();
+    final title = words.join(' ').replaceAll(RegExp(r'[^\w\s]'), '');
+    return title.isNotEmpty ? title : 'New Note';
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  //  MISC
-  // ═══════════════════════════════════════════════════════════════
+  String _categoryForApi(NoteCategory category) {
+    if (category == NoteCategory.other) return 'general';
+    return category.name;
+  }
 
-  void cancelRecording() {
-    _timer?.cancel();
-    // ignore: body_might_complete_normally_catch_error
-    _recorder.stop().catchError((_) {});
-    _recorder.cancel().catchError((_) {});
-    _isRecording = false;
-    _isPaused = false;
-    _isProcessing = false;
-    _seconds = 0;
-    _liveTranscript = '';
-    _uploadProgress = 0.0;
-    _error = null;
-    _processedNote = null;
-    _audioPath = null;
-    _pendingNoteId = null;
+  // ── Save note to Firestore ────────────────────────────
+  Future<void> _saveNote(File audioFile) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    // Try to upload audio (optional — skip if storage not set up)
+    String audioUrl = '';
+    try {
+      // Uncomment if Firebase Storage is configured:
+      // audioUrl = await StorageService().uploadAudio(audioFile, uid);
+    } catch (_) {
+      debugPrint('Audio upload skipped');
+    }
+
+    final note = NoteModel(
+      id: '',
+      userId: uid,
+      title: _noteTitle,
+      transcription: _transcript,
+      summary: _summary,
+      keywords: _keywords,
+      category: _category,
+      language: _language,
+      audioUrl: audioUrl,
+      isFavorite: _isFavorite,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      wordCount: _transcript.split(' ').length,
+      duration: _durationSeconds,
+    );
+
+    final ref = await FirebaseFirestore.instance
+        .collection('notes')
+        .add(note.toFirestore());
+
+    _savedNote = note.copyWith(id: ref.id);
+  }
+
+  Future<void> pauseRecording() async {
+    if (!isRecording || _isPaused) return;
+    try {
+      await _recorder.pause();
+      _isPaused = true;
+      _stopTicker();
+      notifyListeners();
+    } catch (e) {
+      _setError('Failed to pause recording: $e');
+    }
+  }
+
+  Future<void> resumeRecording() async {
+    if (!isRecording || !_isPaused) return;
+    try {
+      await _recorder.resume();
+      _isPaused = false;
+      _startTicker();
+      notifyListeners();
+    } catch (e) {
+      _setError('Failed to resume recording: $e');
+    }
+  }
+
+  Future<void> cancelRecording() async {
+    try {
+      _stopTicker();
+      await _recorder.stop();
+    } catch (_) {}
+    if (_audioPath != null) {
+      final f = File(_audioPath!);
+      if (await f.exists()) {
+        await f.delete();
+      }
+    }
+    reset();
+  }
+
+  void clearError() {
+    _errorMessage = null;
+    if (_status == RecordingStatus.error) {
+      _status = RecordingStatus.idle;
+      _statusMsg = '';
+    }
     notifyListeners();
   }
 
   void clearProcessed() {
-    _processedNote = null;
-    _error = null;
-    _liveTranscript = '';
-    _seconds = 0;
-    _uploadProgress = 0.0;
+    _savedNote = null;
     notifyListeners();
   }
 
-  void clearError() {
-    _error = null;
-    notifyListeners();
-  }
-
-  void _startTimer() {
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      _seconds++;
+  void _startTicker() {
+    _ticker?.cancel();
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      _durationSeconds += 1;
       notifyListeners();
     });
   }
 
-  void _setStatus(String msg, PipelineStep step) {
-    _processingStatus = msg;
+  void _stopTicker() {
+    _ticker?.cancel();
+    _ticker = null;
+  }
+
+  // ── Helpers ───────────────────────────────────────────
+  void _setError(String msg) {
+    _stopTicker();
+    _status = RecordingStatus.error;
+    _isPaused = false;
+    _errorMessage = msg;
+    _statusMsg = 'Error';
+    notifyListeners();
+  }
+
+  void _clearResults() {
+    _transcript = '';
+    _summary = '';
+    _summaryResult = null;
+    _keywords = [];
+    _noteTitle = '';
+    _errorMessage = null;
+    _savedNote = null;
+    _uploadProgress = 0;
+  }
+
+  void reset() {
+    _stopTicker();
+    _status = RecordingStatus.idle;
+    _isPaused = false;
+    _durationSeconds = 0;
+    _statusMsg = '';
+    _clearResults();
     notifyListeners();
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _stopTicker();
     _recorder.dispose();
     super.dispose();
   }
