@@ -89,9 +89,7 @@ class _RecordingScreenState extends State<RecordingScreen>
       rp.clearProcessed();
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => NoteDetailScreen(note: note, isNew: true),
-        ),
+        MaterialPageRoute(builder: (_) => NoteDetailScreen(note: note)),
       );
     }
   }
