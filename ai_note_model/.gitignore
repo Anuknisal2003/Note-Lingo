@@ -10,3 +10,5 @@ dataset/train.json
 dataset/test.json
 dataset/vocab.json
 dataset/metadata.csv
+
+summarizer_model
