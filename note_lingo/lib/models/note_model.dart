@@ -67,6 +67,9 @@ class NoteModel {
     this.isFavorite = false,
   });
 
+  // Backward-compat alias used by some screens/providers.
+  String get transcript => transcription;
+
   // ── From Firestore ─────────────────────────────────────────
   factory NoteModel.fromFirestore(DocumentSnapshot doc) {
     final d = doc.data() as Map<String, dynamic>;
@@ -114,8 +117,13 @@ class NoteModel {
     };
   }
 
+  // Backward-compat alias for older service code.
+  Map<String, dynamic> toJson() => toFirestore();
+
   // ── CopyWith ───────────────────────────────────────────────
   NoteModel copyWith({
+    String? id,
+    String? userId,
     String? title,
     String? transcription,
     String? summary,
@@ -129,8 +137,8 @@ class NoteModel {
     int? duration,
   }) {
     return NoteModel(
-      id: id,
-      userId: userId,
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
       title: title ?? this.title,
       transcription: transcription ?? this.transcription,
       summary: summary ?? this.summary,
@@ -181,5 +189,5 @@ class NoteModel {
     return '${text.substring(0, 120)}...';
   }
 
-  Null get categoryLabel => null;
+  String get categoryLabel => category.label;
 }
