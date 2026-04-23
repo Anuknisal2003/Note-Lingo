@@ -788,10 +788,8 @@ class _LanguagePill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(_flag(value), style: const TextStyle(fontSize: 16)),
-          const SizedBox(width: 6),
           Text(
-            value.toUpperCase(),
+            _languageName(value),
             style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
@@ -809,13 +807,14 @@ class _LanguagePill extends StatelessWidget {
     ),
   );
 
-  String _flag(String code) {
+  String _languageName(String code) {
     switch (code) {
       case 'si':
+        return 'Sinhala';
       case 'ta':
-        return '🇱🇰';
+        return 'Tamil';
       default:
-        return '🇬🇧';
+        return 'English';
     }
   }
 }
@@ -828,9 +827,9 @@ class _LanguageSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const langs = [
-      ('en', '🇬🇧', 'English'),
-      ('si', '🇱🇰', 'Sinhala'),
-      ('ta', '🇱🇰', 'Tamil'),
+      ('en', 'English'),
+      ('si', 'Sinhala'),
+      ('ta', 'Tamil'),
     ];
     return Padding(
       padding: const EdgeInsets.all(24),
@@ -848,10 +847,18 @@ class _LanguageSheet extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           ...langs.map((l) {
-            final (code, flag, name) = l;
+            final (code, name) = l;
             final sel = current == code;
             return GestureDetector(
-              onTap: () => onSelect(code),
+              onTap: () {
+                if (code != 'en') {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('$name language will be available soon.')),
+                  );
+                  return;
+                }
+                onSelect(code);
+              },
               child: Container(
                 margin: const EdgeInsets.only(bottom: 8),
                 padding: const EdgeInsets.symmetric(
@@ -865,8 +872,6 @@ class _LanguageSheet extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    Text(flag, style: const TextStyle(fontSize: 22)),
-                    const SizedBox(width: 12),
                     Text(
                       name,
                       style: TextStyle(
