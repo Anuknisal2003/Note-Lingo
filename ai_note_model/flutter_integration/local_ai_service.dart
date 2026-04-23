@@ -31,7 +31,8 @@ class LocalAiService {
   //  Option C — Android emulator (talking to PC localhost)
   //    Use: http://10.0.2.2:5000
   // ─────────────────────────────────────────────────────────────
-  static const String _baseUrl = 'http://192.168.1.100:5000';
+  static const String _baseUrl =
+      'https://coerce-canal-murkiness.ngrok-free.dev';
   //                                      ↑ change this to your PC IP
 
   static const Duration _timeout = Duration(seconds: 60);
