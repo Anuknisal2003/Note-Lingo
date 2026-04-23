@@ -173,14 +173,7 @@ class NoteModel {
   }
 
   String get languageFlag {
-    switch (language) {
-      case 'si':
-        return '🇱🇰';
-      case 'ta':
-        return '🇱🇰';
-      default:
-        return '🇬🇧';
-    }
+    return languageLabel;
   }
 
   String get previewText {
