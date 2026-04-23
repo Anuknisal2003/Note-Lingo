@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/note_model.dart';
 import '../../providers/notes_provider.dart';
+import '../export/export_screen.dart';
 
 const _bgTop = Color(0xFF6AABF8);
 const _bgMid = Color(0xFF9AC8FB);
@@ -101,6 +102,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen>
     );
     if (confirm == true && mounted) {
       await context.read<NotesProvider>().deleteNote(_note.id);
+      if (!mounted) return;
       Navigator.pop(context);
     }
   }
@@ -110,24 +112,17 @@ class _NoteDetailScreenState extends State<NoteDetailScreen>
     return Scaffold(
       backgroundColor: _bgBot,
       body: NestedScrollView(
-        headerSliverBuilder: (_, __) => [_buildAppBar()],
-        body: Column(
+        headerSliverBuilder: (_, innerBoxIsScrolled) => [_buildAppBar()],
+        body: TabBarView(
+          controller: _tabCtrl,
           children: [
-            _buildTabBar(),
-            Expanded(
-              child: TabBarView(
-                controller: _tabCtrl,
-                children: [
-                  _SummaryTab(note: _note),
-                  _TranscriptTab(
-                    note: _note,
-                    editing: _editing,
-                    ctrl: _transcriptCtrl,
-                  ),
-                  _DetailsTab(note: _note),
-                ],
-              ),
+            _SummaryTab(note: _note),
+            _TranscriptTab(
+              note: _note,
+              editing: _editing,
+              ctrl: _transcriptCtrl,
             ),
+            _DetailsTab(note: _note),
           ],
         ),
       ),
@@ -167,7 +162,10 @@ class _NoteDetailScreenState extends State<NoteDetailScreen>
           onSelected: (v) {
             if (v == 'delete') _deleteNote();
             if (v == 'export') {
-              Navigator.pushNamed(context, '/export', arguments: _note);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => ExportScreen(note: _note)),
+              );
             }
           },
           itemBuilder: (_) => [
@@ -216,22 +214,22 @@ class _NoteDetailScreenState extends State<NoteDetailScreen>
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildTabBar() {
-    return Container(
-      color: _cardBg,
-      child: TabBar(
-        controller: _tabCtrl,
-        indicatorColor: _primary,
-        labelColor: _primary,
-        unselectedLabelColor: _textGrey,
-        tabs: const [
-          Tab(text: 'Summary'),
-          Tab(text: 'Transcript'),
-          Tab(text: 'Details'),
-        ],
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(kTextTabBarHeight),
+        child: Container(
+          color: _cardBg,
+          child: TabBar(
+            controller: _tabCtrl,
+            indicatorColor: _primary,
+            labelColor: _primary,
+            unselectedLabelColor: _textGrey,
+            tabs: const [
+              Tab(text: 'Summary'),
+              Tab(text: 'Transcript'),
+              Tab(text: 'Details'),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -369,8 +367,10 @@ class _SummaryTab extends StatelessWidget {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: _primary.withOpacity(0.15),
-                      border: Border.all(color: _primary.withOpacity(0.4)),
+                      color: _primary.withValues(alpha: 0.15),
+                      border: Border.all(
+                        color: _primary.withValues(alpha: 0.4),
+                      ),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -424,9 +424,9 @@ class _SummaryTab extends StatelessWidget {
     for (final line in lines) {
       if (line.startsWith('##')) {
         final heading = line.replaceAll(RegExp(r'^#+\s*'), '').trim();
-        if (heading.contains('Overview'))
+        if (heading.contains('Overview')) {
           currentSection = 'overview';
-        else if (heading.contains('Concepts') ||
+        } else if (heading.contains('Concepts') ||
             heading.contains('Items') ||
             heading.contains('Points') ||
             heading.contains('Responses')) {
@@ -434,12 +434,13 @@ class _SummaryTab extends StatelessWidget {
           result['points_label'] = heading
               .replaceAll(RegExp(r'[\u{1F300}-\u{1F9FF}]', unicode: true), '')
               .trim();
-        } else if (heading.contains('Conclusion'))
+        } else if (heading.contains('Conclusion')) {
           currentSection = 'conclusion';
-        else if (heading.contains('Keywords'))
+        } else if (heading.contains('Keywords')) {
           currentSection = 'keywords_section';
-        else
+        } else {
           currentSection = null;
+        }
       } else if (line.contains('📚') ||
           line.contains('🗓️') ||
           line.contains('🎙️') ||
