@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -118,7 +120,7 @@ class _HomeScreenState extends State<HomeScreen> {
 // HOME BODY — transparent so the fixed gradient shows through
 // ══════════════════════════════════════════════════════════════════
 
-class _HomeBody extends StatelessWidget {
+class _HomeBody extends StatefulWidget {
   final TextEditingController searchCtrl;
   final String searchQuery;
   final ValueChanged<String> onSearch;
@@ -130,10 +132,32 @@ class _HomeBody extends StatelessWidget {
   });
 
   @override
+  State<_HomeBody> createState() => _HomeBodyState();
+}
+
+class _HomeBodyState extends State<_HomeBody> {
+  Timer? _greetingTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _greetingTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (!mounted) return;
+      setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _greetingTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final notes = context.watch<NotesProvider>();
-    final displayNotes = notes.filteredNotes(searchQuery);
+    final displayNotes = notes.filteredNotes(widget.searchQuery);
     final name = auth.currentUser?.displayName?.split(' ').first ?? 'there';
 
     return CustomScrollView(
@@ -191,9 +215,9 @@ class _HomeBody extends StatelessWidget {
 
                   // white search bar
                   _WhiteSearchBar(
-                    controller: searchCtrl,
-                    query: searchQuery,
-                    onChanged: onSearch,
+                    controller: widget.searchCtrl,
+                    query: widget.searchQuery,
+                    onChanged: widget.onSearch,
                     hint: 'Search notes…',
                   ),
                   const SizedBox(height: 20),
@@ -201,7 +225,9 @@ class _HomeBody extends StatelessWidget {
                   Row(
                     children: [
                       Text(
-                        searchQuery.isEmpty ? 'Recent Notes' : 'Search Results',
+                        widget.searchQuery.isEmpty
+                            ? 'Recent Notes'
+                            : 'Search Results',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
@@ -239,7 +265,7 @@ class _HomeBody extends StatelessWidget {
             hasScrollBody: false,
             child: Padding(
               padding: const EdgeInsets.only(bottom: 100),
-              child: _EmptyState(hasSearch: searchQuery.isNotEmpty),
+              child: _EmptyState(hasSearch: widget.searchQuery.isNotEmpty),
             ),
           )
         else ...[
@@ -276,9 +302,9 @@ class _HomeBody extends StatelessWidget {
 
   String _greeting() {
     final h = DateTime.now().hour;
-    if (h < 12) return 'Good morning,';
-    if (h < 17) return 'Good afternoon,';
-    return 'Good evening,';
+    if (h < 12) return 'Good morning';
+    if (h < 17) return 'Good afternoon';
+    return 'Good evening';
   }
 }
 
