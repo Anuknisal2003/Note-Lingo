@@ -172,12 +172,12 @@ class ExportService {
                 pw.Row(
                   children: [
                     _pdfPill(
-                      '${note.category.emoji} ${note.category.label}',
+                      note.category.label,
                       PdfColors.white,
                     ),
                     pw.SizedBox(width: 8),
                     _pdfPill(
-                      '${note.languageFlag} ${note.languageLabel}',
+                      note.languageLabel,
                       PdfColors.white,
                     ),
                   ],
@@ -198,9 +198,9 @@ class ExportService {
               child: pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
                 children: [
-                  _metaCell('📅 Date', dateStr),
-                  _metaCell('⏱ Duration', note.formattedDuration),
-                  _metaCell('📝 Words', '${note.wordCount}'),
+                  _metaCell('Date', dateStr),
+                  _metaCell('Duration', note.formattedDuration),
+                  _metaCell('Words', '${note.wordCount}'),
                 ],
               ),
             ),
@@ -215,7 +215,7 @@ class ExportService {
               spacing: 6,
               runSpacing: 6,
               children: note.keywords
-                  .map((k) => _pdfPill('#$k', primaryColor))
+                  .map((k) => _pdfPill(k, primaryColor))
                   .toList(),
             ),
             pw.SizedBox(height: 20),
@@ -236,7 +236,7 @@ class ExportService {
                 ),
               ),
               child: pw.Text(
-                note.summary,
+                _toBulletLines(note.summary),
                 style: pw.TextStyle(
                   fontSize: 11,
                   color: textDark,
@@ -259,7 +259,7 @@ class ExportService {
                 border: pw.Border.all(color: borderColor, width: 0.5),
               ),
               child: pw.Text(
-                note.transcription,
+                _toBulletLines(note.transcription),
                 style: pw.TextStyle(
                   fontSize: 10.5,
                   color: textDark,
@@ -363,14 +363,12 @@ class ExportService {
   }) async {
     final buf = StringBuffer();
     final dateStr = DateFormat('MMMM d, yyyy – HH:mm').format(note.createdAt);
-    final sep = '─' * 52;
 
-    buf.writeln('╔══════════════════════════════════════════════════╗');
     buf.writeln('  NOTE LINGO');
-    buf.writeln('╚══════════════════════════════════════════════════╝');
+    buf.writeln('====================================================');
     buf.writeln();
     buf.writeln(note.title.toUpperCase());
-    buf.writeln(sep);
+    buf.writeln('----------------------------------------------------');
 
     if (includeMeta) {
       buf.writeln('Category : ${note.category.label}');
@@ -378,27 +376,27 @@ class ExportService {
       buf.writeln('Date     : $dateStr');
       buf.writeln('Duration : ${note.formattedDuration}');
       buf.writeln('Words    : ${note.wordCount}');
-      buf.writeln(sep);
+      buf.writeln('----------------------------------------------------');
     }
 
     if (includeKeywords && note.keywords.isNotEmpty) {
       buf.writeln();
       buf.writeln('KEYWORDS');
-      buf.writeln(note.keywords.map((k) => '#$k').join('  '));
-      buf.writeln(sep);
+      buf.writeln(note.keywords.join(', '));
+      buf.writeln('----------------------------------------------------');
     }
 
     if (includeSummary && note.summary.isNotEmpty) {
       buf.writeln();
       buf.writeln('AI SUMMARY');
-      buf.writeln(note.summary);
-      buf.writeln(sep);
+      buf.writeln(_toBulletLines(note.summary));
+      buf.writeln('----------------------------------------------------');
     }
 
     if (includeTranscript && note.transcription.isNotEmpty) {
       buf.writeln();
       buf.writeln('FULL TRANSCRIPT');
-      buf.writeln(note.transcription);
+      buf.writeln(_toBulletLines(note.transcription));
     }
 
     final dir = await getTemporaryDirectory();
@@ -456,21 +454,21 @@ class ExportService {
     // Keywords
     if (includeKeywords && note.keywords.isNotEmpty) {
       buf.write(r'\cf1\fs22\b Keywords:\b0\cf3\fs20\par ');
-      buf.write(note.keywords.map((k) => '#${_rtf(k)}').join('  '));
+      buf.write(note.keywords.map(_rtf).join(', '));
       buf.write(r'\par\par');
     }
 
     // Summary
     if (includeSummary && note.summary.isNotEmpty) {
       buf.write(r'\cf1\fs22\b AI Summary:\b0\cf3\fs20\par ');
-      buf.write(_rtf(note.summary));
+      buf.write(_rtf(_toBulletLines(note.summary)));
       buf.write(r'\par\par');
     }
 
     // Transcript
     if (includeTranscript && note.transcription.isNotEmpty) {
       buf.write(r'\cf1\fs22\b Full Transcript:\b0\cf3\fs20\par ');
-      buf.write(_rtf(note.transcription));
+      buf.write(_rtf(_toBulletLines(note.transcription)));
       buf.write(r'\par');
     }
 
@@ -492,11 +490,35 @@ class ExportService {
         .replaceAll('\n', '\\par ');
   }
 
+  String _toBulletLines(String text) {
+    final normalized = text.trim();
+    if (normalized.isEmpty) return normalized;
+
+    final sentences = normalized
+        .split(RegExp(r'(?<=[.!?])\s+'))
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
+
+    if (sentences.length <= 1) {
+      return '- $normalized';
+    }
+
+    return sentences.map((s) => '- $s').join('\n');
+  }
+
   // ── Safe filename ────────────────────────────────────────────
   String _safeName(String title) {
-    return title
+    final sanitized = title
         .replaceAll(RegExp(r'[^\w\s-]'), '')
-        .replaceAll(' ', '_')
-        .substring(0, title.length.clamp(0, 40));
+        .trim()
+        .replaceAll(RegExp(r'\s+'), '_');
+
+    if (sanitized.isEmpty) {
+      return 'note_export';
+    }
+
+    final maxLen = sanitized.length > 40 ? 40 : sanitized.length;
+    return sanitized.substring(0, maxLen);
   }
 }
