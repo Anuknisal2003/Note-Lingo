@@ -69,6 +69,13 @@ class _ExportScreenState extends State<ExportScreen> {
   ];
 
   Future<void> _export(String formatId) async {
+    if (!(_includeSummary || _includeTranscript || _includeKeywords || _includeMeta)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Select at least one section to export.')),
+      );
+      return;
+    }
+
     setState(() => _exporting = formatId);
     try {
       await context.read<NotesProvider>().exportNote(
@@ -83,7 +90,7 @@ class _ExportScreenState extends State<ExportScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Exported as ${formatId.toUpperCase()} ✓',
+            'Exported as ${formatId.toUpperCase()}',
             style: const TextStyle(color: _textDark),
           ),
           backgroundColor: _cardBg,
@@ -230,24 +237,24 @@ class _ExportScreenState extends State<ExportScreen> {
                         const SizedBox(height: 12),
 
                         _ToggleTile(
-                          label: '🤖  AI Summary',
+                          label: 'AI Summary',
                           value: _includeSummary,
                           onChanged: (v) => setState(() => _includeSummary = v),
                         ),
                         _ToggleTile(
-                          label: '🎙️  Full Transcript',
+                          label: 'Full Transcript',
                           value: _includeTranscript,
                           onChanged: (v) =>
                               setState(() => _includeTranscript = v),
                         ),
                         _ToggleTile(
-                          label: '#  Keywords',
+                          label: 'Keywords',
                           value: _includeKeywords,
                           onChanged: (v) =>
                               setState(() => _includeKeywords = v),
                         ),
                         _ToggleTile(
-                          label: '📋  Note Metadata',
+                          label: 'Note Metadata',
                           value: _includeMeta,
                           onChanged: (v) => setState(() => _includeMeta = v),
                         ),
