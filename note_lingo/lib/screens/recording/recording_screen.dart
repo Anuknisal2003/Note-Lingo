@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/note_model.dart';
+import '../../providers/notes_provider.dart';
 import '../../providers/recording_provider.dart';
 import '../../providers/language_provider.dart';
 import '../note_detail/note_detail_screen.dart';
@@ -86,6 +87,7 @@ class _RecordingScreenState extends State<RecordingScreen>
 
     if (rp.processedNote != null) {
       final note = rp.processedNote!;
+      await context.read<NotesProvider>().loadNotes();
       rp.clearProcessed();
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
