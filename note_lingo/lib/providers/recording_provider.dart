@@ -331,7 +331,9 @@ class RecordingProvider extends ChangeNotifier {
   // ── Save note to Firestore ────────────────────────────
   Future<void> _saveNote(File audioFile) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
+    if (uid == null) {
+      throw StateError('You must be signed in to save recordings.');
+    }
 
     // Try to upload audio (optional — skip if storage not set up)
     String audioUrl = '';
