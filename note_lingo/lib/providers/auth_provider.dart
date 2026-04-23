@@ -150,6 +150,33 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  // ── Change Password (requires re-auth) ─────────────────────
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final user = currentUser;
+    if (user == null) throw 'You are not signed in.';
+    final email = user.email;
+    if (email == null || email.isEmpty) {
+      throw 'Password change is only available for email accounts.';
+    }
+
+    _setLoading(true);
+    try {
+      final credential = EmailAuthProvider.credential(
+        email: email,
+        password: currentPassword,
+      );
+      await user.reauthenticateWithCredential(credential);
+      await user.updatePassword(newPassword);
+    } on FirebaseAuthException catch (e) {
+      throw _readable(e);
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   // ── Update Profile ───────────────────────────────────────────
   Future<void> updateProfile({String? name, String? role}) async {
     if (currentUser == null) return;
@@ -206,6 +233,8 @@ class AuthProvider extends ChangeNotifier {
         return 'No internet connection. Check your network.';
       case 'invalid-credential':
         return 'Incorrect email or password.';
+      case 'requires-recent-login':
+        return 'Please sign in again before changing sensitive account settings.';
       default:
         return e.message ?? 'Authentication failed. Please try again.';
     }
