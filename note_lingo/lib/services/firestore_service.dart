@@ -90,22 +90,23 @@ class FirestoreService {
 
   /// Fetch all notes for the current user (one-time)
   Future<List<NoteModel>> fetchNotes() async {
-    final snap = await _notes
-        .where('userId', isEqualTo: _uid)
-        .orderBy('createdAt', descending: true)
-        .get();
-    return snap.docs.map((d) => NoteModel.fromFirestore(d)).toList();
+    final snap = await _notes.where('userId', isEqualTo: _uid).get();
+    final list = snap.docs.map((d) => NoteModel.fromFirestore(d)).toList();
+    _sortByCreatedAtDesc(list);
+    return list;
   }
 
   /// Real-time stream of current user's notes
   Stream<List<NoteModel>> notesStream() {
-    return _notes
-        .where('userId', isEqualTo: _uid)
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map(
-          (snap) => snap.docs.map((d) => NoteModel.fromFirestore(d)).toList(),
-        );
+    return _notes.where('userId', isEqualTo: _uid).snapshots().map((snap) {
+      final list = snap.docs.map((d) => NoteModel.fromFirestore(d)).toList();
+      _sortByCreatedAtDesc(list);
+      return list;
+    });
+  }
+
+  void _sortByCreatedAtDesc(List<NoteModel> notes) {
+    notes.sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 
   /// Fetch notes by category
@@ -113,9 +114,10 @@ class FirestoreService {
     final snap = await _notes
         .where('userId', isEqualTo: _uid)
         .where('category', isEqualTo: cat.name)
-        .orderBy('createdAt', descending: true)
         .get();
-    return snap.docs.map((d) => NoteModel.fromFirestore(d)).toList();
+    final list = snap.docs.map((d) => NoteModel.fromFirestore(d)).toList();
+    _sortByCreatedAtDesc(list);
+    return list;
   }
 
   /// Fetch favourite notes
@@ -123,8 +125,9 @@ class FirestoreService {
     final snap = await _notes
         .where('userId', isEqualTo: _uid)
         .where('isFavorite', isEqualTo: true)
-        .orderBy('createdAt', descending: true)
         .get();
-    return snap.docs.map((d) => NoteModel.fromFirestore(d)).toList();
+    final list = snap.docs.map((d) => NoteModel.fromFirestore(d)).toList();
+    _sortByCreatedAtDesc(list);
+    return list;
   }
 }
