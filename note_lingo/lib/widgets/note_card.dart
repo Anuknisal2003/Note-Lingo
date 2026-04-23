@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
-import '../core/theme/app_theme.dart';
 import '../models/note_model.dart';
 import '../screens/note_detail/note_detail_screen.dart';
+
+const _textDark = Color(0xFF0E1A3A);
+const _textGrey = Color(0xFF6B7A99);
+const _cardBg = Color(0xFFFFFFFF);
+const _border = Color(0xFFD0DFFF);
+const _primary = Color(0xFF4F8EF7);
 
 class NoteCard extends StatelessWidget {
   final NoteModel note;
@@ -10,15 +15,15 @@ class NoteCard extends StatelessWidget {
   Color _catColor() {
     switch (note.category) {
       case NoteCategory.lecture:
-        return const Color(0xFF6C63FF);
+        return const Color(0xFF3F7DF0);
       case NoteCategory.meeting:
-        return const Color(0xFF00B4D8);
+        return const Color(0xFF2E9BDB);
       case NoteCategory.interview:
-        return const Color(0xFF00D9B5);
+        return const Color(0xFF2BAAA0);
       case NoteCategory.personal:
-        return const Color(0xFFFFB547);
+        return const Color(0xFFF59E0B);
       case NoteCategory.other:
-        return const Color(0xFF6B7280);
+        return const Color(0xFF6B7A99);
     }
   }
 
@@ -34,9 +39,16 @@ class NoteCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.bgCard,
+          color: _cardBg.withOpacity(0.9),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.bgBorder),
+          border: Border.all(color: _border),
+          boxShadow: [
+            BoxShadow(
+              color: _primary.withOpacity(0.08),
+              blurRadius: 14,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -66,20 +78,28 @@ class NoteCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   note.languageLabel,
-                  style: Theme.of(context).textTheme.bodySmall,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: _textGrey.withOpacity(0.9),
+                  ),
                 ),
                 const Spacer(),
                 if (note.isFavorite) ...[
                   const Icon(
                     Icons.star_rounded,
-                    color: AppColors.warning,
+                    color: Color(0xFFF59E0B),
                     size: 14,
                   ),
                   const SizedBox(width: 6),
                 ],
                 Text(
                   _relativeDate(note.createdAt),
-                  style: Theme.of(context).textTheme.bodySmall,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: _textGrey.withOpacity(0.85),
+                  ),
                 ),
               ],
             ),
@@ -88,7 +108,12 @@ class NoteCard extends StatelessWidget {
             // Title
             Text(
               note.title,
-              style: Theme.of(context).textTheme.titleLarge,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: _textDark,
+                letterSpacing: -0.2,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -97,7 +122,12 @@ class NoteCard extends StatelessWidget {
             // Preview
             Text(
               note.previewText,
-              style: Theme.of(context).textTheme.bodyMedium,
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.45,
+                color: _textGrey.withOpacity(0.95),
+                fontWeight: FontWeight.w500,
+              ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -114,12 +144,17 @@ class NoteCard extends StatelessWidget {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.bgSurface,
+                      color: color.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: color.withOpacity(0.2)),
                     ),
                     child: Text(
                       '#$k',
-                      style: Theme.of(context).textTheme.bodySmall,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: color,
+                      ),
                     ),
                   );
                 }).toList(),
@@ -130,31 +165,35 @@ class NoteCard extends StatelessWidget {
             // Bottom meta row
             Row(
               children: [
-                const Icon(
-                  Icons.timer_outlined,
-                  color: AppColors.textMuted,
-                  size: 12,
-                ),
+                const Icon(Icons.timer_outlined, color: _textGrey, size: 12),
                 const SizedBox(width: 4),
                 Text(
                   note.formattedDuration,
-                  style: Theme.of(context).textTheme.bodySmall,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: _textGrey,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 const Icon(
                   Icons.text_fields_rounded,
-                  color: AppColors.textMuted,
+                  color: _textGrey,
                   size: 12,
                 ),
                 const SizedBox(width: 4),
                 Text(
                   '${note.wordCount}w',
-                  style: Theme.of(context).textTheme.bodySmall,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: _textGrey,
+                  ),
                 ),
                 const Spacer(),
                 const Icon(
                   Icons.arrow_forward_ios_rounded,
-                  color: AppColors.textMuted,
+                  color: _textGrey,
                   size: 12,
                 ),
               ],
