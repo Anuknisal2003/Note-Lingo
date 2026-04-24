@@ -70,20 +70,64 @@ class SummaryResult {
 }
 
 class LocalAiService {
-  // ── Change this to your PC's local IP address ──
-  // Find it with: ipconfig (Windows) or ifconfig (Mac/Linux)
-  // Look for IPv4 Address under Wi-Fi — e.g. 192.168.1.15
-  static const String _baseUrl = 'http://192.168.1.15:5000';
+  // Optional override: --dart-define=LOCAL_AI_BASE_URL=http://<ip>:5000
+  static const String _configuredBaseUrl = String.fromEnvironment(
+    'LOCAL_AI_BASE_URL',
+    defaultValue: '',
+  );
 
   static const Duration _timeout = Duration(seconds: 60);
+  String? _activeBaseUrl;
+
+  List<String> _candidateBaseUrls() {
+    final urls = <String>[];
+
+    if (_configuredBaseUrl.isNotEmpty) {
+      urls.add(_configuredBaseUrl);
+    }
+
+    // Android emulator routes host machine localhost through 10.0.2.2.
+    if (Platform.isAndroid) {
+      urls.add('http://10.0.2.2:5000');
+    }
+
+    urls.addAll([
+      'http://127.0.0.1:5000',
+      'http://localhost:5000',
+      // Current machine LAN address from Flask startup logs.
+      'http://172.20.10.4:5000',
+    ]);
+
+    return urls.toSet().toList();
+  }
+
+  Future<String> _resolveBaseUrl() async {
+    if (_activeBaseUrl != null) return _activeBaseUrl!;
+
+    for (final baseUrl in _candidateBaseUrls()) {
+      try {
+        final res = await http
+            .get(Uri.parse('$baseUrl/health'))
+            .timeout(const Duration(seconds: 3));
+        if (res.statusCode == 200) {
+          _activeBaseUrl = baseUrl;
+          return baseUrl;
+        }
+      } catch (_) {
+        // Keep scanning candidates until one responds.
+      }
+    }
+
+    throw Exception(
+      'AI server not reachable. Set LOCAL_AI_BASE_URL (dart-define) to your PC IP, e.g. http://192.168.x.x:5000',
+    );
+  }
 
   // ── Check if Flask server is running ───────────────────
   Future<bool> isServerAvailable() async {
     try {
-      final res = await http
-          .get(Uri.parse('$_baseUrl/health'))
-          .timeout(const Duration(seconds: 5));
-      return res.statusCode == 200;
+      await _resolveBaseUrl();
+      return true;
     } catch (_) {
       return false;
     }
@@ -91,7 +135,8 @@ class LocalAiService {
 
   // ── Transcribe audio file ─────────────────────────────
   Future<String> transcribe(File audioFile) async {
-    final uri = Uri.parse('$_baseUrl/transcribe');
+    final baseUrl = await _resolveBaseUrl();
+    final uri = Uri.parse('$baseUrl/transcribe');
     final req = http.MultipartRequest('POST', uri);
 
     req.files.add(await http.MultipartFile.fromPath('audio', audioFile.path));
@@ -113,7 +158,8 @@ class LocalAiService {
     String text, {
     String category = 'general',
   }) async {
-    final uri = Uri.parse('$_baseUrl/summarise');
+    final baseUrl = await _resolveBaseUrl();
+    final uri = Uri.parse('$baseUrl/summarise');
     final res = await http
         .post(
           uri,
