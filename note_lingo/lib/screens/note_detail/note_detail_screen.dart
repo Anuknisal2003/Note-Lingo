@@ -388,6 +388,55 @@ class _SummaryTab extends StatelessWidget {
           const SizedBox(height: 20),
         ],
 
+        // Q&A
+        _SectionHeader(icon: '❓', title: 'Q&A Extracted'),
+        const SizedBox(height: 8),
+        _ContentCard(
+          child: note.qaItems.isNotEmpty
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: note.qaItems.asMap().entries.map((entry) {
+                    final index = entry.key + 1;
+                    final qa = entry.value;
+                    final question = (qa['question'] ?? '').toString().trim();
+                    final answer = (qa['answer'] ?? '').toString().trim();
+
+                    return Padding(
+                      padding: EdgeInsets.only(
+                        bottom: index == note.qaItems.length ? 0 : 12,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Q$index: $question',
+                            style: const TextStyle(
+                              color: _textDark,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'A: $answer',
+                            style: const TextStyle(
+                              color: _textGrey,
+                              fontSize: 14,
+                              height: 1.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                )
+              : const Text(
+                  'No Q&A was generated for this note yet.',
+                  style: TextStyle(color: _textGrey, fontSize: 14),
+                ),
+        ),
+        const SizedBox(height: 20),
+
         // Conclusion
         if (sections['conclusion'] != null) ...[
           _SectionHeader(icon: '💡', title: 'Conclusion'),
