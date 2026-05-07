@@ -273,6 +273,8 @@ class _RecordingScreenState extends State<RecordingScreen>
                             _LiveTranscript(text: rp.liveTranscript),
                             const SizedBox(height: 24),
                           ],
+
+                          // (processing logs removed - terminal-only)
                         ],
                       ),
                     ),
@@ -826,11 +828,7 @@ class _LanguageSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const langs = [
-      ('en', 'English'),
-      ('si', 'Sinhala'),
-      ('ta', 'Tamil'),
-    ];
+    const langs = [('en', 'English'), ('si', 'Sinhala'), ('ta', 'Tamil')];
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -853,7 +851,9 @@ class _LanguageSheet extends StatelessWidget {
               onTap: () {
                 if (code != 'en') {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('$name language will be available soon.')),
+                    SnackBar(
+                      content: Text('$name language will be available soon.'),
+                    ),
                   );
                   return;
                 }
@@ -898,3 +898,5 @@ class _LanguageSheet extends StatelessWidget {
     );
   }
 }
+
+// ActivityLogCard removed: logs are now terminal-only
