@@ -49,6 +49,17 @@ class NoteModel {
   final int wordCount;
   final int duration; // in seconds
   final bool isFavorite;
+  // New features
+  final List<String> tags; // Smart tags from AI
+  final String? folder; // Smart folder organization
+  final List<String> relatedNoteIds; // Related notes
+  final String? sentiment; // positive, negative, neutral
+  final double sentimentScore; // 0-1
+  final List<String> speakers; // Speaker labels
+  final List<Map<String, dynamic>> qaItems; // Q&A pairs
+  final List<String> entities; // Named entities
+  final List<Map<String, dynamic>> sharedWith; // Shared access
+  final int commentCount;
 
   const NoteModel({
     required this.id,
@@ -65,10 +76,61 @@ class NoteModel {
     required this.wordCount,
     required this.duration,
     this.isFavorite = false,
+    this.tags = const [],
+    this.folder,
+    this.relatedNoteIds = const [],
+    this.sentiment,
+    this.sentimentScore = 0.5,
+    this.speakers = const [],
+    this.qaItems = const [],
+    this.entities = const [],
+    this.sharedWith = const [],
+    this.commentCount = 0,
   });
 
   // Backward-compat alias used by some screens/providers.
   String get transcript => transcription;
+
+  // Factory method from JSON (for API responses)
+  factory NoteModel.fromJson(Map<String, dynamic> json) {
+    return NoteModel(
+      id: json['id'] ?? '',
+      userId: json['userId'] ?? '',
+      title: json['title'] ?? 'Untitled Note',
+      transcription: json['transcription'] ?? '',
+      summary: json['summary'] ?? '',
+      language: json['language'] ?? 'en',
+      category: NoteCategory.values.firstWhere(
+        (e) => e.name == (json['category'] ?? 'other'),
+        orElse: () => NoteCategory.other,
+      ),
+      keywords: List<String>.from(json['keywords'] ?? []),
+      audioUrl: json['audioUrl'],
+      createdAt: json['createdAt'] is Timestamp
+          ? (json['createdAt'] as Timestamp).toDate()
+          : DateTime.parse(
+              json['createdAt'] ?? DateTime.now().toIso8601String(),
+            ),
+      updatedAt: json['updatedAt'] is Timestamp
+          ? (json['updatedAt'] as Timestamp).toDate()
+          : DateTime.parse(
+              json['updatedAt'] ?? DateTime.now().toIso8601String(),
+            ),
+      wordCount: json['wordCount'] ?? 0,
+      duration: json['duration'] ?? 0,
+      isFavorite: json['isFavorite'] ?? false,
+      tags: List<String>.from(json['tags'] ?? []),
+      folder: json['folder'],
+      relatedNoteIds: List<String>.from(json['relatedNoteIds'] ?? []),
+      sentiment: json['sentiment'],
+      sentimentScore: (json['sentimentScore'] ?? 0.5).toDouble(),
+      speakers: List<String>.from(json['speakers'] ?? []),
+      qaItems: List<Map<String, dynamic>>.from(json['qaItems'] ?? []),
+      entities: List<String>.from(json['entities'] ?? []),
+      sharedWith: List<Map<String, dynamic>>.from(json['sharedWith'] ?? []),
+      commentCount: json['commentCount'] ?? 0,
+    );
+  }
 
   // ── From Firestore ─────────────────────────────────────────
   factory NoteModel.fromFirestore(DocumentSnapshot doc) {
@@ -95,6 +157,16 @@ class NoteModel {
       wordCount: d['wordCount'] ?? 0,
       duration: d['duration'] ?? 0,
       isFavorite: d['isFavorite'] ?? false,
+      tags: List<String>.from(d['tags'] ?? []),
+      folder: d['folder'],
+      relatedNoteIds: List<String>.from(d['relatedNoteIds'] ?? []),
+      sentiment: d['sentiment'],
+      sentimentScore: (d['sentimentScore'] ?? 0.5).toDouble(),
+      speakers: List<String>.from(d['speakers'] ?? []),
+      qaItems: List<Map<String, dynamic>>.from(d['qaItems'] ?? []),
+      entities: List<String>.from(d['entities'] ?? []),
+      sharedWith: List<Map<String, dynamic>>.from(d['sharedWith'] ?? []),
+      commentCount: d['commentCount'] ?? 0,
     );
   }
 
@@ -114,6 +186,16 @@ class NoteModel {
       'wordCount': wordCount,
       'duration': duration,
       'isFavorite': isFavorite,
+      'tags': tags,
+      'folder': folder,
+      'relatedNoteIds': relatedNoteIds,
+      'sentiment': sentiment,
+      'sentimentScore': sentimentScore,
+      'speakers': speakers,
+      'qaItems': qaItems,
+      'entities': entities,
+      'sharedWith': sharedWith,
+      'commentCount': commentCount,
     };
   }
 
@@ -135,6 +217,16 @@ class NoteModel {
     bool? isFavorite,
     int? wordCount,
     int? duration,
+    List<String>? tags,
+    String? folder,
+    List<String>? relatedNoteIds,
+    String? sentiment,
+    double? sentimentScore,
+    List<String>? speakers,
+    List<Map<String, dynamic>>? qaItems,
+    List<String>? entities,
+    List<Map<String, dynamic>>? sharedWith,
+    int? commentCount,
   }) {
     return NoteModel(
       id: id ?? this.id,
@@ -151,6 +243,16 @@ class NoteModel {
       wordCount: wordCount ?? this.wordCount,
       duration: duration ?? this.duration,
       isFavorite: isFavorite ?? this.isFavorite,
+      tags: tags ?? this.tags,
+      folder: folder ?? this.folder,
+      relatedNoteIds: relatedNoteIds ?? this.relatedNoteIds,
+      sentiment: sentiment ?? this.sentiment,
+      sentimentScore: sentimentScore ?? this.sentimentScore,
+      speakers: speakers ?? this.speakers,
+      qaItems: qaItems ?? this.qaItems,
+      entities: entities ?? this.entities,
+      sharedWith: sharedWith ?? this.sharedWith,
+      commentCount: commentCount ?? this.commentCount,
     );
   }
 
