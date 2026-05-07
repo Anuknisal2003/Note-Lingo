@@ -11,6 +11,10 @@ import 'providers/auth_provider.dart';
 import 'providers/notes_provider.dart';
 import 'providers/recording_provider.dart';
 import 'providers/language_provider.dart';
+import 'providers/ai_enhancements_provider.dart';
+import 'providers/smart_organization_provider.dart';
+import 'providers/analytics_provider.dart';
+import 'providers/collaboration_provider.dart';
 import 'screens/splash_screen.dart';
 
 void main() async {
@@ -52,6 +56,10 @@ class NoteLingo extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => NotesProvider()),
         ChangeNotifierProvider(create: (_) => RecordingProvider()),
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
+        ChangeNotifierProvider(create: (_) => AiEnhancementsProvider()),
+        ChangeNotifierProvider(create: (_) => SmartOrganizationProvider()),
+        ChangeNotifierProvider(create: (_) => AnalyticsProvider()),
+        ChangeNotifierProvider(create: (_) => CollaborationProvider()),
       ],
       child: MaterialApp(
         title: 'Note Lingo',
