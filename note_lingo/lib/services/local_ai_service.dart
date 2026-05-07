@@ -5,6 +5,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class SummaryResult {
   final String title;
@@ -135,22 +136,34 @@ class LocalAiService {
 
   // ── Transcribe audio file ─────────────────────────────
   Future<String> transcribe(File audioFile) async {
-    final baseUrl = await _resolveBaseUrl();
-    final uri = Uri.parse('$baseUrl/transcribe');
-    final req = http.MultipartRequest('POST', uri);
+    // Try local first
+    try {
+      final baseUrl = await _resolveBaseUrl();
+      final uri = Uri.parse('$baseUrl/transcribe');
+      final req = http.MultipartRequest('POST', uri);
 
-    req.files.add(await http.MultipartFile.fromPath('audio', audioFile.path));
+      req.files.add(await http.MultipartFile.fromPath('audio', audioFile.path));
 
-    final streamed = await req.send().timeout(_timeout);
-    final body = await http.Response.fromStream(streamed);
+      final streamed = await req.send().timeout(_timeout);
+      final body = await http.Response.fromStream(streamed);
 
-    if (body.statusCode != 200) {
-      final msg = _parseError(body.body);
-      throw Exception('Transcription failed (${body.statusCode}): $msg');
+      if (body.statusCode != 200) {
+        final msg = _parseError(body.body);
+        throw Exception('Transcription failed (${body.statusCode}): $msg');
+      }
+
+      final data = jsonDecode(body.body) as Map<String, dynamic>;
+      return (data['text'] ?? '').toString().trim();
+    } catch (e) {
+      // Fallback: return instruction to use OpenAI
+      throw Exception(
+        'Local AI transcription failed. '
+        'Ensure Flask server is running on your PC:\n'
+        '  python -m flask_api.app\n\n'
+        'Or set OPENAI_API_KEY for automatic fallback. '
+        'Error: $e',
+      );
     }
-
-    final data = jsonDecode(body.body) as Map<String, dynamic>;
-    return (data['text'] ?? '').toString().trim();
   }
 
   // ── Get structured summary from custom BART model ─────
@@ -158,23 +171,28 @@ class LocalAiService {
     String text, {
     String category = 'general',
   }) async {
-    final baseUrl = await _resolveBaseUrl();
-    final uri = Uri.parse('$baseUrl/summarise');
-    final res = await http
-        .post(
-          uri,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'text': text, 'category': category}),
-        )
-        .timeout(_timeout);
+    try {
+      final baseUrl =
+          dotenv.env['LOCAL_AI_BASE_URL'] ?? 'http://localhost:5000';
+      final uri = Uri.parse('$baseUrl/summarise');
+      final res = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'text': text, 'category': category}),
+          )
+          .timeout(const Duration(seconds: 60));
 
-    if (res.statusCode != 200) {
-      final msg = _parseError(res.body);
-      throw Exception('Summarisation failed (${res.statusCode}): $msg');
+      if (res.statusCode != 200) {
+        final msg = _parseError(res.body);
+        throw Exception('Summarisation failed (${res.statusCode}): $msg');
+      }
+
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      return SummaryResult.fromJson(data);
+    } catch (e) {
+      throw Exception('Summarization failed: $e');
     }
-
-    final data = jsonDecode(res.body) as Map<String, dynamic>;
-    return SummaryResult.fromJson(data);
   }
 
   String _parseError(String body) {
