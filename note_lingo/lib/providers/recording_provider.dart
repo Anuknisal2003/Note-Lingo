@@ -1,6 +1,6 @@
 // lib/providers/recording_provider.dart
 // Full pipeline: Record → Whisper transcribe → Custom BART summarise → Save
-// NO OpenAI. NO API keys. 100% local.
+// With offline support, OpenAI fallback, and AI enhancements
 
 import 'dart:io';
 import 'dart:async';
@@ -11,6 +11,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/note_model.dart';
 import '../services/local_ai_service.dart';
+import '../services/enhanced_ai_service.dart';
+import '../services/offline_queue_service.dart';
+import '../services/smart_organization_service.dart';
+import '../services/analytics_service.dart';
 
 enum RecordingStatus { idle, recording, processing, done, error }
 
@@ -28,6 +32,11 @@ class RecordingProvider extends ChangeNotifier {
   bool _isFavorite = false;
   String? _errorMessage;
   NoteModel? _savedNote;
+
+  // New fields for enhancements
+  AiEnhancement? _enhancement;
+  List<SmartTag> _smartTags = [];
+  int _offlineQueueCount = 0;
   int _durationSeconds = 0;
   bool _isPaused = false;
   double _uploadProgress = 0;
@@ -36,6 +45,10 @@ class RecordingProvider extends ChangeNotifier {
   // ── Internal ──────────────────────────────────────────
   final AudioRecorder _recorder = AudioRecorder();
   final LocalAiService _ai = LocalAiService();
+  final EnhancedAiService _enhancedAi = EnhancedAiService();
+  final OfflineQueueService _offlineQueue = OfflineQueueService();
+  final SmartOrganizationService _smartOrg = SmartOrganizationService();
+  final AnalyticsService _analytics = AnalyticsService();
   String? _audioPath;
 
   // ── Getters ───────────────────────────────────────────
@@ -64,6 +77,17 @@ class RecordingProvider extends ChangeNotifier {
     final m = _durationSeconds ~/ 60;
     final s = _durationSeconds % 60;
     return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+  }
+
+  // New getters
+  AiEnhancement? get enhancement => _enhancement;
+  List<SmartTag> get smartTags => _smartTags;
+  int get offlineQueueCount => _offlineQueueCount;
+
+  /// Check offline queue count
+  Future<void> updateOfflineQueueCount() async {
+    _offlineQueueCount = await _offlineQueue.getQueueCount();
+    notifyListeners();
   }
 
   // ── Setters ───────────────────────────────────────────
@@ -344,6 +368,14 @@ class RecordingProvider extends ChangeNotifier {
       debugPrint('Audio upload skipped');
     }
 
+    // Get AI enhancements
+    _statusMsg = 'Analyzing content...';
+    _uploadProgress = 0.75;
+    notifyListeners();
+
+    _enhancement = await _enhancedAi.analyzeNote(_transcript);
+    _smartTags = await _smartOrg.autoTag(_transcript);
+
     final note = NoteModel(
       id: '',
       userId: uid,
@@ -359,13 +391,39 @@ class RecordingProvider extends ChangeNotifier {
       updatedAt: DateTime.now(),
       wordCount: _transcript.split(' ').length,
       duration: _durationSeconds,
+      tags: _smartTags.map((t) => t.name).toList(),
+      sentiment: _enhancement?.sentiment,
+      sentimentScore: _enhancement?.sentimentScore ?? 0.5,
+      speakers: _enhancement?.speakers ?? [],
+      qaItems:
+          _enhancement?.qaItems
+              .map((q) => {'question': q.question, 'answer': q.answer})
+              .toList() ??
+          [],
+      entities: _enhancement?.entities ?? [],
     );
+
+    _statusMsg = 'Saving note...';
+    _uploadProgress = 0.9;
+    notifyListeners();
 
     final ref = await FirebaseFirestore.instance
         .collection('notes')
         .add(note.toFirestore());
 
     _savedNote = note.copyWith(id: ref.id);
+
+    // Record analytics
+    try {
+      await _analytics.recordNoteCreated(
+        ref.id,
+        durationSeconds: _durationSeconds,
+        wordCount: note.wordCount,
+        category: _category,
+      );
+    } catch (_) {
+      debugPrint('Analytics recording failed');
+    }
   }
 
   Future<void> pauseRecording() async {
