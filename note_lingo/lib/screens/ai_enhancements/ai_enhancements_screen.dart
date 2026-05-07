@@ -88,8 +88,7 @@ class _AiEnhancementsScreenState extends State<AiEnhancementsScreen> {
                 const SizedBox(height: 16),
 
                 // Q&A
-                if (enhancement.qaItems.isNotEmpty)
-                  _QaCard(qaItems: enhancement.qaItems),
+                _QaCard(qaItems: enhancement.qaItems),
                 const SizedBox(height: 16),
 
                 // Entities
@@ -252,25 +251,31 @@ class _QaCard extends StatelessWidget {
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          ...qaItems.asMap().entries.map((entry) {
-            final index = entry.key + 1;
-            final qa = entry.value;
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Q$index: ${qa.question}',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'A: ${qa.answer}',
-                  style: TextStyle(color: Colors.grey[400]),
-                ),
-                const SizedBox(height: 12),
-              ],
-            );
-          }).toList(),
+          if (qaItems.isEmpty)
+            Text(
+              'No Q&A was generated for this note yet.',
+              style: TextStyle(color: Colors.grey[400]),
+            )
+          else
+            ...qaItems.asMap().entries.map((entry) {
+              final index = entry.key + 1;
+              final qa = entry.value;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Q$index: ${qa.question}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'A: ${qa.answer}',
+                    style: TextStyle(color: Colors.grey[400]),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              );
+            }).toList(),
         ],
       ),
     );
