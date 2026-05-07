@@ -4,6 +4,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -87,6 +88,11 @@ class LocalAiService {
       urls.add(_configuredBaseUrl);
     }
 
+    final envBaseUrl = dotenv.env['LOCAL_AI_BASE_URL']?.trim() ?? '';
+    if (envBaseUrl.isNotEmpty) {
+      urls.add(envBaseUrl);
+    }
+
     // Android emulator routes host machine localhost through 10.0.2.2.
     if (Platform.isAndroid) {
       urls.add('http://10.0.2.2:5000');
@@ -120,7 +126,7 @@ class LocalAiService {
     }
 
     throw Exception(
-      'AI server not reachable. Set LOCAL_AI_BASE_URL (dart-define) to your PC IP, e.g. http://192.168.x.x:5000',
+      'AI server not reachable. Set LOCAL_AI_BASE_URL in assets/.env or dart-define to your PC IP, e.g. http://192.168.x.x:5000',
     );
   }
 
@@ -136,6 +142,20 @@ class LocalAiService {
 
   // ── Transcribe audio file ─────────────────────────────
   Future<String> transcribe(File audioFile) async {
+    // Basic validation
+    if (!await audioFile.exists()) {
+      throw Exception('Audio file not found: ${audioFile.path}');
+    }
+    final size = await audioFile.length();
+    debugPrint(
+      '[LocalAiService] transcribe: file=${audioFile.path} size=$size',
+    );
+    if (size < 1024) {
+      throw Exception(
+        'Audio file appears too small (${size} bytes), likely empty.',
+      );
+    }
+
     // Try local first
     try {
       final baseUrl = await _resolveBaseUrl();
@@ -153,15 +173,53 @@ class LocalAiService {
       }
 
       final data = jsonDecode(body.body) as Map<String, dynamic>;
-      return (data['text'] ?? '').toString().trim();
+      final text = (data['text'] ?? '').toString().trim();
+      debugPrint(
+        '[LocalAiService] local response: status=${body.statusCode} text_len=${text.length}',
+      );
+      return text;
     } catch (e) {
-      // Fallback: return instruction to use OpenAI
+      // If OpenAI API key is present, try Whisper API as a fallback
+      final openai = dotenv.env['OPENAI_API_KEY']?.trim() ?? '';
+      if (openai.isNotEmpty) {
+        try {
+          final uri = Uri.parse(
+            'https://api.openai.com/v1/audio/transcriptions',
+          );
+          final req = http.MultipartRequest('POST', uri);
+          req.headers['Authorization'] = 'Bearer $openai';
+          req.files.add(
+            await http.MultipartFile.fromPath('file', audioFile.path),
+          );
+          req.fields['model'] = 'whisper-1';
+
+          final streamed = await req.send().timeout(_timeout);
+          final body = await http.Response.fromStream(streamed);
+          final data = jsonDecode(body.body) as Map<String, dynamic>;
+          final text = (data['text'] ?? '').toString().trim();
+          debugPrint(
+            '[LocalAiService] OpenAI response: status=${body.statusCode} text_len=${text.length}',
+          );
+          if (body.statusCode == 200) {
+            return text;
+          } else {
+            final msg = _parseError(body.body);
+            throw Exception(
+              'OpenAI transcription failed (${body.statusCode}): $msg',
+            );
+          }
+        } catch (oe) {
+          throw Exception(
+            'Transcription failed (local and OpenAI fallback): $oe',
+          );
+        }
+      }
+
+      // No OpenAI key — surface helpful error
       throw Exception(
-        'Local AI transcription failed. '
-        'Ensure Flask server is running on your PC:\n'
+        'Local AI transcription failed. Ensure Flask server is running on your PC:\n'
         '  python -m flask_api.app\n\n'
-        'Or set OPENAI_API_KEY for automatic fallback. '
-        'Error: $e',
+        'Or set OPENAI_API_KEY in assets/.env to enable OpenAI fallback. Error: $e',
       );
     }
   }
