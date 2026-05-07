@@ -217,11 +217,16 @@ class EnhancedAiService {
     try {
       // Try OpenAI first
       if (_apiKey.isNotEmpty) {
-        return await _extractQaWithOpenAi(text);
+        final qaItems = await _extractQaWithOpenAi(text);
+        if (qaItems.isNotEmpty) {
+          return qaItems;
+        }
       }
-      return _extractQaWithLocal(text);
+      final localItems = _extractQaWithLocal(text);
+      return localItems.isNotEmpty ? localItems : _extractQaFallback(text);
     } catch (e) {
-      return _extractQaWithLocal(text);
+      final localItems = _extractQaWithLocal(text);
+      return localItems.isNotEmpty ? localItems : _extractQaFallback(text);
     }
   }
 
@@ -288,6 +293,36 @@ class EnhancedAiService {
       }
     }
     return qaItems.take(5).toList();
+  }
+
+  List<QaItem> _extractQaFallback(String text) {
+    final sentences = text
+        .split(RegExp(r'(?<=[.!?])\s+'))
+        .map((s) => s.trim())
+        .where((s) => s.length > 12)
+        .toList();
+
+    if (sentences.isEmpty) {
+      return [];
+    }
+
+    final question = 'What is the main topic?';
+    final answer = sentences.first;
+    final items = <QaItem>[QaItem(question: question, answer: answer)];
+
+    if (sentences.length > 1) {
+      items.add(
+        QaItem(question: 'What is one key point?', answer: sentences[1]),
+      );
+    }
+
+    if (sentences.length > 2) {
+      items.add(
+        QaItem(question: 'What is the conclusion?', answer: sentences.last),
+      );
+    }
+
+    return items;
   }
 
   /// Detect speaker transitions/labels in transcript
@@ -401,6 +436,95 @@ class EnhancedAiService {
       'Could',
     };
     return common.contains(word);
+  }
+
+  /// Translate arbitrary text to English using OpenAI fallback when available.
+  /// If no API key is configured, returns the original text.
+  Future<String> translateToEnglish(String text) async {
+    if (_apiKey.isEmpty) return text;
+    try {
+      final uri = Uri.parse('https://api.openai.com/v1/chat/completions');
+      final response = await http
+          .post(
+            uri,
+            headers: {
+              'Authorization': 'Bearer $_apiKey',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({
+              'model': 'gpt-3.5-turbo',
+              'messages': [
+                {
+                  'role': 'system',
+                  'content':
+                      'You are a translator. Translate the user text to English. Preserve meaning but do not add commentary.',
+                },
+                {
+                  'role': 'user',
+                  'content': text.substring(
+                    0,
+                    text.length > 3000 ? 3000 : text.length,
+                  ),
+                },
+              ],
+              'temperature': 0.0,
+              'max_tokens': 1200,
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final content = data['choices']?[0]?['message']?['content'] ?? '';
+        return content.toString().trim();
+      }
+    } catch (_) {}
+    return text;
+  }
+
+  /// Translate English text into `targetLang` (ISO code or language name) using OpenAI if available.
+  Future<String> translate(String text, String targetLang) async {
+    if (_apiKey.isEmpty) return text;
+    try {
+      final uri = Uri.parse('https://api.openai.com/v1/chat/completions');
+      final response = await http
+          .post(
+            uri,
+            headers: {
+              'Authorization': 'Bearer $_apiKey',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({
+              'model': 'gpt-3.5-turbo',
+              'messages': [
+                {
+                  'role': 'system',
+                  'content':
+                      'You are a translator. Translate the user text into the requested language exactly. Respond with the translation only.',
+                },
+                {
+                  'role': 'user',
+                  'content':
+                      'Translate the following text to $targetLang:\n\n' +
+                      text.substring(
+                        0,
+                        text.length > 3000 ? 3000 : text.length,
+                      ),
+                },
+              ],
+              'temperature': 0.0,
+              'max_tokens': 1200,
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final content = data['choices']?[0]?['message']?['content'] ?? '';
+        return content.toString().trim();
+      }
+    } catch (_) {}
+    return text;
   }
 
   /// Full enhancement analysis
