@@ -19,10 +19,17 @@ import '../services/analytics_service.dart';
 enum RecordingStatus { idle, recording, processing, done, error }
 
 class RecordingProvider extends ChangeNotifier {
+  RecordingProvider() {
+    unawaited(syncOfflineQueue());
+  }
+
   // ── State ─────────────────────────────────────────────
   RecordingStatus _status = RecordingStatus.idle;
   String _statusMsg = '';
   String _transcript = '';
+  String _originalTranscript = '';
+  String _englishTranscript = '';
+  String _localizedTranscript = '';
   String _summary = ''; // raw summary text
   SummaryResult? _summaryResult; // full structured result
   List<String> _keywords = [];
@@ -55,6 +62,9 @@ class RecordingProvider extends ChangeNotifier {
   RecordingStatus get status => _status;
   String get statusMsg => _statusMsg;
   String get transcript => _transcript;
+  String get originalTranscript => _originalTranscript;
+  String get englishTranscript => _englishTranscript;
+  String get localizedTranscript => _localizedTranscript;
   String get liveTranscript => _transcript;
   String get summary => _summary;
   SummaryResult? get summaryResult => _summaryResult;
@@ -84,10 +94,101 @@ class RecordingProvider extends ChangeNotifier {
   List<SmartTag> get smartTags => _smartTags;
   int get offlineQueueCount => _offlineQueueCount;
 
+  // Activity logging: terminal-only
   /// Check offline queue count
   Future<void> updateOfflineQueueCount() async {
     _offlineQueueCount = await _offlineQueue.getQueueCount();
     notifyListeners();
+  }
+
+  void _addLog(String message) {
+    final stamp = DateTime.now().toIso8601String().substring(11, 19);
+    final line = '[$stamp] $message';
+    // Print to terminal for developer tracing (terminal-only)
+    debugPrint(line);
+  }
+
+  /// Sync any queued offline recordings when the server is back.
+  Future<void> syncOfflineQueue() async {
+    try {
+      if (FirebaseAuth.instance.currentUser == null) {
+        return;
+      }
+
+      if (!await _ai.isServerAvailable()) {
+        _addLog('AI server offline; sync skipped');
+        return;
+      }
+
+      final pendingItems = await _offlineQueue.getPendingItems();
+      if (pendingItems.isEmpty) {
+        _addLog('No offline notes to sync');
+        await updateOfflineQueueCount();
+        return;
+      }
+
+      _addLog('Syncing ${pendingItems.length} offline note(s)');
+
+      for (final item in pendingItems) {
+        try {
+          _status = RecordingStatus.processing;
+          _statusMsg = 'Syncing offline note…';
+          _uploadProgress = 0.5;
+          notifyListeners();
+
+          final audioFile = File(item.audioPath);
+          if (!await audioFile.exists()) {
+            _addLog('Skipped ${item.id}: audio file missing');
+            await _offlineQueue.incrementRetry(item.id);
+            continue;
+          }
+
+          _addLog('Transcribing offline note ${item.id}');
+          final text = await _ai.transcribe(audioFile);
+          if (text.isEmpty) {
+            _addLog('Skipped ${item.id}: no transcript returned');
+            await _offlineQueue.incrementRetry(item.id);
+            continue;
+          }
+
+          _addLog('Summarising offline note ${item.id}');
+          final summaryResult = await _ai.summarise(
+            text,
+            category: _categoryForApi(item.category),
+          );
+
+          _transcript = text;
+          _summaryResult = summaryResult;
+          _summary = summaryResult.toMarkdown();
+          _keywords = summaryResult.keywords;
+          _noteTitle = summaryResult.title.isNotEmpty
+              ? summaryResult.title
+              : _extractTitle(text);
+          _category = item.category;
+          _language = item.language;
+          _isFavorite = item.isFavorite;
+          _enhancement = await _enhancedAi.analyzeNote(text);
+          _smartTags = await _smartOrg.autoTag(text);
+
+          await _saveNoteToFirestore(audioFile);
+          await _offlineQueue.removeFromQueue(item.id);
+          _addLog('Offline note ${item.id} synced successfully');
+        } catch (e) {
+          await _offlineQueue.incrementRetry(item.id);
+          _addLog('Offline note ${item.id} sync failed: $e');
+          debugPrint('Offline sync failed for ${item.id}: $e');
+        }
+      }
+
+      await updateOfflineQueueCount();
+      _status = RecordingStatus.done;
+      _statusMsg = 'Offline notes synced';
+      _addLog('Offline sync complete');
+      notifyListeners();
+    } catch (e) {
+      _addLog('Offline sync skipped: $e');
+      debugPrint('Offline sync skipped: $e');
+    }
   }
 
   // ── Setters ───────────────────────────────────────────
@@ -117,6 +218,7 @@ class RecordingProvider extends ChangeNotifier {
   // ── Start recording ───────────────────────────────────
   Future<void> startRecording() async {
     try {
+      _addLog('Starting new recording');
       final hasPermission = await _recorder.hasPermission();
       if (!hasPermission) {
         _setError(
@@ -125,9 +227,14 @@ class RecordingProvider extends ChangeNotifier {
         return;
       }
 
-      final dir = await getTemporaryDirectory();
+      final persistentDir = await getApplicationDocumentsDirectory();
+      final recordingsDir = Directory('${persistentDir.path}/recordings');
+      if (!await recordingsDir.exists()) {
+        await recordingsDir.create(recursive: true);
+      }
+
       _audioPath =
-          '${dir.path}/note_${DateTime.now().millisecondsSinceEpoch}.m4a';
+          '${recordingsDir.path}/note_${DateTime.now().millisecondsSinceEpoch}.m4a';
 
       await _recorder.start(
         RecordConfig(
@@ -164,6 +271,7 @@ class RecordingProvider extends ChangeNotifier {
       _status = RecordingStatus.processing;
       _statusMsg = 'Checking AI server…';
       _uploadProgress = 0.15;
+      _addLog('Recording stopped; starting processing');
       notifyListeners();
 
       await _processAudio();
@@ -184,63 +292,107 @@ class RecordingProvider extends ChangeNotifier {
       // ── Step 1: Check server ──────────────────────────
       _statusMsg = 'Connecting to AI server…';
       _uploadProgress = 0.25;
+      _addLog('Checking AI server availability');
       notifyListeners();
 
       final serverUp = await _ai.isServerAvailable();
       if (!serverUp) {
-        _setError(
-          'AI server not reachable.\n\n'
-          'Start it on your PC:\n'
-          '  py -3.11 flask_api/app.py\n\n'
-          'Make sure phone and PC are on the same Wi-Fi.',
-        );
+        _addLog('AI server not reachable; saving offline');
+        await _queueOfflineRecording(audioFile);
+        _status = RecordingStatus.done;
+        _statusMsg = 'Saved offline. It will sync when the AI server is back.';
+        _uploadProgress = 1;
+        notifyListeners();
         return;
       }
 
       // ── Step 2: Transcribe ───────────────
       _statusMsg = 'Transcribing......';
       _uploadProgress = 0.45;
+      _addLog('Sending audio to Whisper endpoint');
       notifyListeners();
 
+      final transcribeWatch = Stopwatch()..start();
+      final fileSize = await audioFile.length();
+      _addLog('Audio path: ${audioFile.path} (size: ${fileSize} bytes)');
       final text = await _ai.transcribe(audioFile);
+      transcribeWatch.stop();
+      _addLog(
+        'Transcription complete in ${transcribeWatch.elapsedMilliseconds} ms',
+      );
 
       if (text.isEmpty) {
-        _setError('No speech detected. Please speak clearly and try again.');
+        final size = await audioFile.length();
+        _addLog('Transcription returned empty text (file size: ${size} bytes)');
+        _setError(
+          'No speech detected. Audio file size: ${size} bytes. Please speak louder, check microphone permissions, or try again.',
+        );
         return;
       }
-      _transcript = text;
+      // Keep original, then translate to English as canonical form
+      _originalTranscript = text;
+      _addLog('Translating transcript to English (if needed)');
+      _englishTranscript = await _enhancedAi.translateToEnglish(text);
+      _transcript = _englishTranscript;
 
       // ── Step 3: Summarise with custom BART ───────────
       _statusMsg = 'Summarising with custom AI model…';
       _uploadProgress = 0.7;
+      _addLog('Sending transcript to BART summariser');
       notifyListeners();
 
       SummaryResult result;
       try {
+        final summaryWatch = Stopwatch()..start();
         result = await _ai.summarise(
-          text,
+          _transcript,
           category: _categoryForApi(_category),
+        );
+        summaryWatch.stop();
+        _addLog(
+          'Summarisation complete in ${summaryWatch.elapsedMilliseconds} ms',
         );
       } catch (_) {
         // Fallback: use simple local extraction
         result = _localFallbackSummary(text);
+        _addLog('Summariser fallback used');
       }
 
       _summaryResult = result;
       _summary = result.toMarkdown();
+      // Localize transcript/summary to user's preferred language if requested
+      if (_language != 'en') {
+        try {
+          _addLog('Translating transcript and summary to ${_language}');
+          _localizedTranscript = await _enhancedAi.translate(
+            _englishTranscript,
+            _language,
+          );
+          _summary = await _enhancedAi.translate(_summary, _language);
+        } catch (_) {
+          _addLog('Translation to ${_language} failed; showing English');
+          _localizedTranscript = _englishTranscript;
+        }
+      } else {
+        _localizedTranscript = _englishTranscript;
+      }
       _keywords = result.keywords;
-      _noteTitle = result.title.isNotEmpty ? result.title : _extractTitle(text);
+      _noteTitle = result.title.isNotEmpty
+          ? result.title
+          : _extractTitle(_englishTranscript);
 
       // ── Step 4: Save to Firestore ─────────────────────
       _statusMsg = 'Saving note…';
       _uploadProgress = 0.9;
+      _addLog('Saving note to Firestore');
       notifyListeners();
 
-      await _saveNote(audioFile);
+      await _saveNoteToFirestore(audioFile);
 
       _status = RecordingStatus.done;
       _statusMsg = 'Note saved successfully!';
       _uploadProgress = 1;
+      _addLog('Note saved successfully');
       notifyListeners();
     } catch (e) {
       _setError('Processing failed: $e');
@@ -353,7 +505,28 @@ class RecordingProvider extends ChangeNotifier {
   }
 
   // ── Save note to Firestore ────────────────────────────
-  Future<void> _saveNote(File audioFile) async {
+  Future<void> _queueOfflineRecording(File audioFile) async {
+    try {
+      final item = OfflineQueueItem(
+        id: DateTime.now().microsecondsSinceEpoch.toString(),
+        audioPath: audioFile.path,
+        transcript: null,
+        summary: null,
+        category: _category,
+        language: _language,
+        isFavorite: _isFavorite,
+        createdAt: DateTime.now(),
+      );
+
+      await _offlineQueue.addToQueue(item);
+      await updateOfflineQueueCount();
+      _addLog('Recorded offline note queued for later sync');
+    } catch (e) {
+      _setError('Could not save offline recording: $e');
+    }
+  }
+
+  Future<void> _saveNoteToFirestore(File audioFile) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) {
       throw StateError('You must be signed in to save recordings.');
@@ -371,6 +544,7 @@ class RecordingProvider extends ChangeNotifier {
     // Get AI enhancements
     _statusMsg = 'Analyzing content...';
     _uploadProgress = 0.75;
+    _addLog('Running AI enhancements');
     notifyListeners();
 
     _enhancement = await _enhancedAi.analyzeNote(_transcript);
