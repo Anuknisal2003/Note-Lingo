@@ -800,8 +800,192 @@ def denoise_test():
 
 
 # ════════════════════════════════════════════════════════
-#   STARTUP
+#   TRANSLATION HELPERS  (lazy-import translation_service)
 # ════════════════════════════════════════════════════════
+
+def _try_translate_to_english(text: str, source_lang: str) -> str:
+    """Translate text to English using MarianMT; return original on failure."""
+    try:
+        from translation_service import translate_to_english
+        return translate_to_english(text, source_lang)
+    except Exception as e:
+        log.warning(f"translate_to_english({source_lang}) failed: {e}")
+        return text
+
+
+def _try_translate_from_english(text: str, target_lang: str):
+    """Translate text from English to target_lang; return None on failure."""
+    try:
+        from translation_service import translate_from_english
+        return translate_from_english(text, target_lang)
+    except Exception as e:
+        log.warning(f"translate_from_english({target_lang}) failed: {e}")
+        return None
+
+
+# ════════════════════════════════════════════════════════
+#   FULL PIPELINE ENDPOINT
+# ════════════════════════════════════════════════════════
+
+@app.route('/process', methods=['POST'])
+def process():
+    """
+    Full pipeline: audio → transcribe → (translate) → summarise → (translate back)
+
+    Form fields:
+      audio      : audio file (any format)
+      category   : lecture | meeting | interview | personal | general  (default: general)
+      denoise    : 0 | 1 | auto | light | spectral | aggressive        (default: 1)
+      denoise_strength : float 0.5–2.0                                 (default: 1.0)
+
+    Returns JSON:
+      original_transcript, english_transcript, detected_language,
+      is_translated, title, category_heading, overview, key_points,
+      points_label, keywords, conclusion, raw_summary,
+      translated_overview, translated_key_points, translated_conclusion,
+      translated_summary, processing_time
+    """
+    if not load_whisper():
+        return jsonify({'error': 'Whisper model not loaded'}), 503
+
+    if 'audio' not in request.files:
+        return jsonify({'error': 'No audio file provided'}), 400
+
+    audio_file = request.files['audio']
+    category   = (request.form.get('category') or 'general').strip().lower()
+    suffix     = Path(audio_file.filename or 'audio.m4a').suffix or '.m4a'
+
+    log.info(f"🔄  /process  file={audio_file.filename}  category={category}")
+    t0 = time.time()
+
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp_in:
+        audio_file.save(tmp_in.name)
+        input_path = tmp_in.name
+
+    wav_path = input_path.replace(suffix, '.wav')
+    temp_paths = {input_path}
+    pre_denoise_path = None
+
+    try:
+        # ── 1. Convert to WAV ────────────────────────────
+        if suffix.lower() != '.wav':
+            ok = convert_to_wav(input_path, wav_path)
+            if ok:
+                temp_paths.add(wav_path)
+            else:
+                wav_path = input_path
+        pre_denoise_path = wav_path
+
+        # ── 2. Denoise ───────────────────────────────────
+        denoise_flag = request.form.get('denoise', '1').strip()
+        if denoise_flag != '0':
+            method   = 'auto' if denoise_flag == '1' else denoise_flag
+            strength = float(request.form.get('denoise_strength', '1.0'))
+            denoised = wav_path.replace('.wav', '.denoised.wav')
+            if denoise_audio(wav_path, denoised, method=method, strength=strength):
+                wav_path = denoised
+                temp_paths.add(wav_path)
+
+        # ── 3. Transcribe with Whisper ───────────────────
+        log.info("  [1/4] Transcribing…")
+        transcribe_kwargs = {
+            'fp16': (device_str == 'cuda'),
+            'task': 'transcribe',
+            'condition_on_previous_text': False,
+        }
+        whisper_result = whisper_model.transcribe(wav_path, **transcribe_kwargs)
+        original_transcript = (whisper_result.get('text') or '').strip()
+        detected_language   = (whisper_result.get('language') or 'en').strip().lower()
+
+        if not original_transcript:
+            # Retry without language hint
+            retry = whisper_model.transcribe(
+                pre_denoise_path or wav_path,
+                **{k: v for k, v in transcribe_kwargs.items() if k != 'language'},
+            )
+            original_transcript = (retry.get('text') or '').strip()
+            detected_language   = (retry.get('language') or detected_language).strip().lower()
+
+        if not original_transcript:
+            return jsonify({'error': 'No speech detected in audio'}), 422
+
+        log.info(f"  Transcript lang={detected_language}  len={len(original_transcript)}")
+
+        # ── 4. Translate transcript to English (if needed) ──
+        is_translated    = detected_language != 'en'
+        english_transcript = original_transcript
+
+        if is_translated:
+            log.info(f"  [2/4] Translating {detected_language}→en…")
+            translated = _try_translate_to_english(original_transcript, detected_language)
+            if translated and translated != original_transcript:
+                english_transcript = translated
+            else:
+                # Translation was a no-op or failed — treat as English
+                is_translated = False
+                english_transcript = original_transcript
+                log.warning(f"  Translation {detected_language}→en returned unchanged text; treating as English")
+        else:
+            log.info("  [2/4] Language is English — skipping translation")
+
+        # ── 5. Summarise English text ────────────────────
+        log.info("  [3/4] Summarising…")
+        summary = build_structured_summary(english_transcript, category)
+
+        # ── 6. Translate summary fields back (if needed) ─
+        translated_overview    = None
+        translated_key_points  = None
+        translated_conclusion  = None
+        translated_summary     = None
+
+        if is_translated:
+            log.info(f"  [4/4] Translating summary en→{detected_language}…")
+            translated_overview   = _try_translate_from_english(summary['overview'],    detected_language)
+            translated_key_points = [
+                _try_translate_from_english(pt, detected_language) or pt
+                for pt in summary['key_points']
+            ]
+            translated_conclusion = _try_translate_from_english(summary['conclusion'], detected_language)
+            translated_summary    = _try_translate_from_english(summary['raw_summary'], detected_language)
+        else:
+            log.info("  [4/4] No back-translation needed")
+
+        elapsed = round(time.time() - t0, 2)
+        log.info(f"✅  /process done in {elapsed}s  lang={detected_language}  translated={is_translated}")
+
+        return jsonify({
+            'original_transcript':    original_transcript,
+            'english_transcript':     english_transcript,
+            'detected_language':      detected_language,
+            'is_translated':          is_translated,
+            # structured summary fields
+            'title':                  summary['title'],
+            'category_heading':       summary['category_heading'],
+            'overview':               summary['overview'],
+            'key_points':             summary['key_points'],
+            'points_label':           summary['points_label'],
+            'keywords':               summary['keywords'],
+            'conclusion':             summary['conclusion'],
+            'raw_summary':            summary['raw_summary'],
+            # translated versions (None when not applicable)
+            'translated_overview':    translated_overview,
+            'translated_key_points':  translated_key_points,
+            'translated_conclusion':  translated_conclusion,
+            'translated_summary':     translated_summary,
+            'processing_time':        elapsed,
+        })
+
+    except Exception as e:
+        log.error(f"❌  /process error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+    finally:
+        for p in temp_paths:
+            try:
+                os.unlink(p)
+            except Exception:
+                pass
+
 
 # ════════════════════════════════════════════════════════
 #   STARTUP
