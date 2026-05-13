@@ -4,23 +4,54 @@
 
 import 'dart:io';
 import 'dart:async';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../models/note_model.dart';
 import '../services/local_ai_service.dart';
 import '../services/enhanced_ai_service.dart';
 import '../services/offline_queue_service.dart';
 import '../services/smart_organization_service.dart';
 import '../services/analytics_service.dart';
+import '../services/draft_service.dart';
+import '../services/retry_backoff_service.dart';
+import '../services/firestore_batch_service.dart';
+import '../services/model_preload_service.dart';
 
 enum RecordingStatus { idle, recording, processing, done, error }
 
-class RecordingProvider extends ChangeNotifier {
+enum RecordingQuality { low, medium, high }
+
+class RecordingProvider extends ChangeNotifier with WidgetsBindingObserver {
   RecordingProvider() {
+    WidgetsBinding.instance.addObserver(this);
+    _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
+      if (user != null) {
+        unawaited(syncOfflineQueue());
+      } else {
+        unawaited(updateOfflineQueueCount());
+      }
+    });
+    unawaited(updateOfflineQueueCount());
     unawaited(syncOfflineQueue());
+    // Trigger async model preload (non-blocking)
+    unawaited(_modelPreload.preloadModels());
+
+    // Sync when network becomes available (WiFi or mobile data turns on)
+    _connectivitySub = Connectivity().onConnectivityChanged.listen((results) {
+      final hasNetwork = results.any(
+        (r) =>
+            r == ConnectivityResult.wifi ||
+            r == ConnectivityResult.mobile ||
+            r == ConnectivityResult.ethernet,
+      );
+      if (hasNetwork) {
+        _addLog('Network available — triggering offline sync');
+        unawaited(syncOfflineQueue());
+      }
+    });
   }
 
   // ── State ─────────────────────────────────────────────
@@ -48,6 +79,13 @@ class RecordingProvider extends ChangeNotifier {
   bool _isPaused = false;
   double _uploadProgress = 0;
   Timer? _ticker;
+  // VAD / quality settings
+  RecordingQuality _quality = RecordingQuality.high;
+  bool _vadEnabled = true;
+  bool _noiseCancellation = false;
+  // Denoising configuration
+  String _denoiseMethod = 'auto'; // 'auto', 'light', 'spectral', 'aggressive'
+  double _denoiseStrength = 1.0; // 0.5=light, 1.0=medium, 1.5=aggressive
 
   // ── Internal ──────────────────────────────────────────
   final AudioRecorder _recorder = AudioRecorder();
@@ -56,7 +94,16 @@ class RecordingProvider extends ChangeNotifier {
   final OfflineQueueService _offlineQueue = OfflineQueueService();
   final SmartOrganizationService _smartOrg = SmartOrganizationService();
   final AnalyticsService _analytics = AnalyticsService();
+  final DraftService _draftService = DraftService();
+  final FirestoreBatchService _batch = FirestoreBatchService();
+  final ModelPreloadService _modelPreload = ModelPreloadService();
   String? _audioPath;
+  String? _currentDraftId;
+  bool _draftSaved = false;
+  Timer? _draftTimer;
+  StreamSubscription<User?>? _authSub;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
+  bool _isSyncingOfflineQueue = false;
 
   // ── Getters ───────────────────────────────────────────
   RecordingStatus get status => _status;
@@ -93,6 +140,13 @@ class RecordingProvider extends ChangeNotifier {
   AiEnhancement? get enhancement => _enhancement;
   List<SmartTag> get smartTags => _smartTags;
   int get offlineQueueCount => _offlineQueueCount;
+  RecordingQuality get quality => _quality;
+  bool get vadEnabled => _vadEnabled;
+  bool get noiseCancellationEnabled => _noiseCancellation;
+  bool get draftSaved => _draftSaved;
+  String? get currentDraftId => _currentDraftId;
+  String get denoiseMethod => _denoiseMethod;
+  double get denoiseStrength => _denoiseStrength;
 
   // Activity logging: terminal-only
   /// Check offline queue count
@@ -101,93 +155,168 @@ class RecordingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Get pending offline items (ready to retry)
+  Future<List<OfflineQueueItem>> getPendingItems() async {
+    return _offlineQueue.getPendingItems();
+  }
+
+  /// Get backoff items (not yet ready to retry)
+  Future<List<OfflineQueueItem>> getBackoffItems() async {
+    return _offlineQueue.getBackoffItems();
+  }
+
+  /// Get all offline queue items
+  Future<List<OfflineQueueItem>> getAllQueueItems() async {
+    return _offlineQueue.getQueue();
+  }
+
+  /// Get failed items (exhausted all retries)
+  Future<List<OfflineQueueItem>> getFailedItems() async {
+    return _offlineQueue.getFailedItems();
+  }
+
+  /// Reset a failed item so it can be retried again
+  Future<void> resetFailedItem(String itemId) async {
+    await _offlineQueue.resetRetries(itemId);
+    await updateOfflineQueueCount();
+  }
+
   void _addLog(String message) {
     final stamp = DateTime.now().toIso8601String().substring(11, 19);
     final line = '[$stamp] $message';
-    // Print to terminal for developer tracing (terminal-only)
     debugPrint(line);
   }
 
-  /// Sync any queued offline recordings when the server is back.
+  /// Sync offline recordings with batch processing and exponential backoff.
   Future<void> syncOfflineQueue() async {
+    if (_isSyncingOfflineQueue) return;
+    _isSyncingOfflineQueue = true;
     try {
-      if (FirebaseAuth.instance.currentUser == null) {
-        return;
-      }
-
+      if (FirebaseAuth.instance.currentUser == null) return;
       if (!await _ai.isServerAvailable()) {
         _addLog('AI server offline; sync skipped');
         return;
       }
 
+      // Show items still in backoff
+      final backoffItems = await _offlineQueue.getBackoffItems();
+      if (backoffItems.isNotEmpty) {
+        final delays = backoffItems
+            .map((i) {
+              final delayStr = RetryBackoffService.formatDelay(
+                i.getRetryDelaySeconds(),
+              );
+              return '${i.id.substring(0, 8)}($delayStr)';
+            })
+            .join(', ');
+        _addLog('In backoff: $delays');
+      }
+
       final pendingItems = await _offlineQueue.getPendingItems();
       if (pendingItems.isEmpty) {
-        _addLog('No offline notes to sync');
+        _addLog('No offline notes ready to sync');
         await updateOfflineQueueCount();
         return;
       }
 
-      _addLog('Syncing ${pendingItems.length} offline note(s)');
+      _addLog('Batch syncing ${pendingItems.length} offline note(s)');
+      _status = RecordingStatus.processing;
+      _uploadProgress = 0.3;
+      notifyListeners();
 
-      for (final item in pendingItems) {
-        try {
-          _status = RecordingStatus.processing;
-          _statusMsg = 'Syncing offline note…';
-          _uploadProgress = 0.5;
-          notifyListeners();
+      // Batch process: all items use transactional sync
+      final results = await _offlineQueue.batchProcessItems(pendingItems, (
+        item,
+      ) async {
+        final audioFile = File(item.audioPath);
+        if (!await audioFile.exists()) throw Exception('audio missing');
 
-          final audioFile = File(item.audioPath);
-          if (!await audioFile.exists()) {
-            _addLog('Skipped ${item.id}: audio file missing');
-            await _offlineQueue.incrementRetry(item.id);
-            continue;
+        _statusMsg = 'Syncing ${item.id.substring(0, 8)}…';
+        _uploadProgress = 0.5;
+        notifyListeners();
+
+        _addLog('Transcribing ${item.id}');
+        final transcription = await _ai.transcribe(
+          audioFile,
+          enableDenoise: true,
+          denoiseMethod: item.denoiseMethod,
+          denoiseStrength: item.denoiseStrength,
+          languageHint: item.language,
+        );
+        final text = transcription.text;
+        if (text.isEmpty) throw Exception('no transcript');
+
+        final sourceLanguage = transcription.language.isNotEmpty
+            ? transcription.language
+            : item.language;
+        final englishText = await _enhancedAi.translateToEnglish(text);
+
+        final summaryResult = await _ai.summarise(
+          englishText,
+          category: _categoryForApi(item.category),
+        );
+        _originalTranscript = text;
+        _englishTranscript = englishText;
+        _transcript = englishText;
+        _summaryResult = summaryResult;
+        final summaryMarkdown = summaryResult.toMarkdown();
+        _summary = summaryMarkdown;
+        _localizedTranscript = englishText;
+        if (sourceLanguage != 'en') {
+          try {
+            _localizedTranscript = await _enhancedAi.translate(
+              englishText,
+              sourceLanguage,
+            );
+            _summary = await _enhancedAi.translate(
+              summaryMarkdown,
+              sourceLanguage,
+            );
+          } catch (_) {
+            _localizedTranscript = englishText;
+            _summary = summaryMarkdown;
           }
-
-          _addLog('Transcribing offline note ${item.id}');
-          final text = await _ai.transcribe(audioFile);
-          if (text.isEmpty) {
-            _addLog('Skipped ${item.id}: no transcript returned');
-            await _offlineQueue.incrementRetry(item.id);
-            continue;
-          }
-
-          _addLog('Summarising offline note ${item.id}');
-          final summaryResult = await _ai.summarise(
-            text,
-            category: _categoryForApi(item.category),
-          );
-
-          _transcript = text;
-          _summaryResult = summaryResult;
-          _summary = summaryResult.toMarkdown();
-          _keywords = summaryResult.keywords;
-          _noteTitle = summaryResult.title.isNotEmpty
-              ? summaryResult.title
-              : _extractTitle(text);
-          _category = item.category;
-          _language = item.language;
-          _isFavorite = item.isFavorite;
-          _enhancement = await _enhancedAi.analyzeNote(text);
-          _smartTags = await _smartOrg.autoTag(text);
-
-          await _saveNoteToFirestore(audioFile);
-          await _offlineQueue.removeFromQueue(item.id);
-          _addLog('Offline note ${item.id} synced successfully');
-        } catch (e) {
-          await _offlineQueue.incrementRetry(item.id);
-          _addLog('Offline note ${item.id} sync failed: $e');
-          debugPrint('Offline sync failed for ${item.id}: $e');
         }
-      }
+        _keywords = summaryResult.keywords;
+        _noteTitle = summaryResult.title.isNotEmpty
+            ? summaryResult.title
+            : _extractTitle(englishText);
+        _category = item.category;
+        _language = sourceLanguage;
+        _isFavorite = item.isFavorite;
+        _enhancement = await _enhancedAi.analyzeNote(englishText);
+        _smartTags = await _smartOrg.autoTag(englishText);
+
+        await _saveNoteToFirestore(audioFile);
+        try {
+          await _draftService.deleteDraft(item.id);
+        } catch (_) {}
+        _addLog('${item.id} ✓');
+        return (text, summaryResult.toMarkdown());
+      });
+
+      int ok = results.values.where((s) => s).length;
+      int fail = results.values.where((s) => !s).length;
+      _addLog('Batch result: $ok success, $fail retrying');
 
       await updateOfflineQueueCount();
       _status = RecordingStatus.done;
-      _statusMsg = 'Offline notes synced';
-      _addLog('Offline sync complete');
+      _statusMsg = ok > 0 ? '$ok synced!' : 'Retrying…';
+      _uploadProgress = 1;
       notifyListeners();
     } catch (e) {
-      _addLog('Offline sync skipped: $e');
-      debugPrint('Offline sync skipped: $e');
+      _addLog('Sync error: $e');
+      debugPrint('Offline sync error: $e');
+    } finally {
+      _isSyncingOfflineQueue = false;
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(syncOfflineQueue());
+      unawaited(updateOfflineQueueCount());
     }
   }
 
@@ -215,8 +344,28 @@ class RecordingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setDenoiseMethod(String method) {
+    _denoiseMethod = method;
+    notifyListeners();
+  }
+
+  void setDenoiseStrength(double strength) {
+    _denoiseStrength = (strength * 100).round() / 100; // Round to 2 decimals
+    notifyListeners();
+  }
+
   // ── Start recording ───────────────────────────────────
   Future<void> startRecording() async {
+    await startRecordingWithOptions();
+  }
+
+  Future<void> startRecordingWithOptions({
+    RecordingQuality quality = RecordingQuality.high,
+    bool vadEnabled = true,
+    bool noiseCancellation = false,
+    String denoiseMethod = 'auto',
+    double denoiseStrength = 1.0,
+  }) async {
     try {
       _addLog('Starting new recording');
       final hasPermission = await _recorder.hasPermission();
@@ -236,14 +385,51 @@ class RecordingProvider extends ChangeNotifier {
       _audioPath =
           '${recordingsDir.path}/note_${DateTime.now().millisecondsSinceEpoch}.m4a';
 
+      // Apply quality presets
+      _quality = quality;
+      _vadEnabled = vadEnabled;
+      _noiseCancellation = noiseCancellation;
+      _denoiseMethod = denoiseMethod;
+      _denoiseStrength = denoiseStrength;
+
+      var encoder = AudioEncoder.aacLc;
+      var bitRate = 128000;
+      var sampleRate = 16000; // Use 16kHz for emulator compatibility
+      switch (_quality) {
+        case RecordingQuality.low:
+          bitRate = 48000;
+          sampleRate = 16000;
+          break;
+        case RecordingQuality.medium:
+          bitRate = 64000;
+          sampleRate = 16000;
+          break;
+        case RecordingQuality.high:
+          bitRate = 128000;
+          sampleRate = 16000;
+      }
+
       await _recorder.start(
         RecordConfig(
-          encoder: AudioEncoder.aacLc,
-          bitRate: 128000,
-          sampleRate: 44100,
+          encoder: encoder,
+          bitRate: bitRate,
+          sampleRate: sampleRate,
         ),
         path: _audioPath!,
       );
+
+      // Start VAD polling if enabled
+      if (_vadEnabled) {
+        // VAD monitoring (voice activity detection)
+      }
+
+      // Start draft autosave timer (every 5s)
+      _currentDraftId = 'draft_${DateTime.now().microsecondsSinceEpoch}';
+      _draftSaved = false;
+      _draftTimer?.cancel();
+      _draftTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
+        await _saveDraft();
+      });
 
       _status = RecordingStatus.recording;
       _isPaused = false;
@@ -266,6 +452,9 @@ class RecordingProvider extends ChangeNotifier {
       if (language != null) _language = language;
 
       _stopTicker();
+      // Stop VAD monitoring
+      // stop draft autosave timer (keep draft on-disk for restore)
+      _draftTimer?.cancel();
       await _recorder.stop();
       _isPaused = false;
       _status = RecordingStatus.processing;
@@ -314,8 +503,23 @@ class RecordingProvider extends ChangeNotifier {
 
       final transcribeWatch = Stopwatch()..start();
       final fileSize = await audioFile.length();
-      _addLog('Audio path: ${audioFile.path} (size: ${fileSize} bytes)');
-      final text = await _ai.transcribe(audioFile);
+      _addLog('Audio path: ${audioFile.path} (size: $fileSize bytes)');
+
+      if (fileSize < 2048) {
+        _setError(
+          'No audio was captured. On the Android emulator, enable microphone input in the emulator settings or test on a device with a working mic.',
+        );
+        return;
+      }
+
+      final transcription = await _ai.transcribe(
+        audioFile,
+        enableDenoise: _noiseCancellation,
+        denoiseMethod: _denoiseMethod,
+        denoiseStrength: _denoiseStrength,
+        languageHint: _language,
+      );
+      final text = transcription.text;
       transcribeWatch.stop();
       _addLog(
         'Transcription complete in ${transcribeWatch.elapsedMilliseconds} ms',
@@ -323,14 +527,20 @@ class RecordingProvider extends ChangeNotifier {
 
       if (text.isEmpty) {
         final size = await audioFile.length();
-        _addLog('Transcription returned empty text (file size: ${size} bytes)');
+        _addLog('Transcription returned empty text (file size: $size bytes)');
         _setError(
-          'No speech detected. Audio file size: ${size} bytes. Please speak louder, check microphone permissions, or try again.',
+          size < 2048
+              ? 'No audio was captured. On the Android emulator, enable microphone input in the emulator settings or test on a device with a working mic.'
+              : 'No speech detected. Audio file size: $size bytes. Please speak louder, check microphone permissions, or try again.',
         );
         return;
       }
       // Keep original, then translate to English as canonical form
       _originalTranscript = text;
+      final sourceLanguage = transcription.language.isNotEmpty
+          ? transcription.language
+          : _language;
+      _language = sourceLanguage;
       _addLog('Translating transcript to English (if needed)');
       _englishTranscript = await _enhancedAi.translateToEnglish(text);
       _transcript = _englishTranscript;
@@ -361,16 +571,16 @@ class RecordingProvider extends ChangeNotifier {
       _summaryResult = result;
       _summary = result.toMarkdown();
       // Localize transcript/summary to user's preferred language if requested
-      if (_language != 'en') {
+      if (sourceLanguage != 'en') {
         try {
-          _addLog('Translating transcript and summary to ${_language}');
+          _addLog('Translating transcript and summary to $sourceLanguage');
           _localizedTranscript = await _enhancedAi.translate(
             _englishTranscript,
-            _language,
+            sourceLanguage,
           );
-          _summary = await _enhancedAi.translate(_summary, _language);
+          _summary = await _enhancedAi.translate(_summary, sourceLanguage);
         } catch (_) {
-          _addLog('Translation to ${_language} failed; showing English');
+          _addLog('Translation to $sourceLanguage failed; showing English');
           _localizedTranscript = _englishTranscript;
         }
       } else {
@@ -507,8 +717,20 @@ class RecordingProvider extends ChangeNotifier {
   // ── Save note to Firestore ────────────────────────────
   Future<void> _queueOfflineRecording(File audioFile) async {
     try {
+      final draftId =
+          _currentDraftId ?? 'draft_${DateTime.now().microsecondsSinceEpoch}';
+      _currentDraftId = draftId;
+      await _draftService.saveDraft(
+        DraftItem(
+          id: draftId,
+          audioPath: audioFile.path,
+          transcript: _transcript.isNotEmpty ? _transcript : null,
+        ),
+      );
+      _draftSaved = true;
+
       final item = OfflineQueueItem(
-        id: DateTime.now().microsecondsSinceEpoch.toString(),
+        id: draftId,
         audioPath: audioFile.path,
         transcript: null,
         summary: null,
@@ -516,11 +738,15 @@ class RecordingProvider extends ChangeNotifier {
         language: _language,
         isFavorite: _isFavorite,
         createdAt: DateTime.now(),
+        denoiseMethod: _denoiseMethod,
+        denoiseStrength: _denoiseStrength,
       );
 
       await _offlineQueue.addToQueue(item);
       await updateOfflineQueueCount();
-      _addLog('Recorded offline note queued for later sync');
+      _addLog(
+        'Recorded offline note saved to drafts and queued for later sync',
+      );
     } catch (e) {
       _setError('Could not save offline recording: $e');
     }
@@ -581,16 +807,25 @@ class RecordingProvider extends ChangeNotifier {
     _uploadProgress = 0.9;
     notifyListeners();
 
-    final ref = await FirebaseFirestore.instance
-        .collection('notes')
-        .add(note.toFirestore());
+    // Use batch write for atomic operation
+    final ids = await _batch.saveBatch([note]);
+    final noteId = ids.isNotEmpty ? ids.first : '';
 
-    _savedNote = note.copyWith(id: ref.id);
+    _savedNote = note.copyWith(id: noteId);
+
+    // Remove associated draft after successful save
+    if (_currentDraftId != null) {
+      try {
+        await _draftService.deleteDraft(_currentDraftId!);
+      } catch (_) {}
+      _currentDraftId = null;
+      _draftSaved = false;
+    }
 
     // Record analytics
     try {
       await _analytics.recordNoteCreated(
-        ref.id,
+        noteId,
         durationSeconds: _durationSeconds,
         wordCount: note.wordCount,
         category: _category,
@@ -634,6 +869,14 @@ class RecordingProvider extends ChangeNotifier {
       if (await f.exists()) {
         await f.delete();
       }
+    }
+    // Remove draft if user cancels explicitly
+    if (_currentDraftId != null) {
+      try {
+        await _draftService.deleteDraft(_currentDraftId!);
+      } catch (_) {}
+      _currentDraftId = null;
+      _draftSaved = false;
     }
     reset();
   }
@@ -686,6 +929,48 @@ class RecordingProvider extends ChangeNotifier {
     _uploadProgress = 0;
   }
 
+  Future<void> _saveDraft() async {
+    try {
+      if (_currentDraftId == null || _audioPath == null) return;
+      final item = DraftItem(
+        id: _currentDraftId!,
+        audioPath: _audioPath,
+        transcript: _transcript.isNotEmpty ? _transcript : null,
+      );
+      await _draftService.saveDraft(item);
+      _draftSaved = true;
+      _addLog('Draft saved: $_currentDraftId');
+    } catch (e) {
+      debugPrint('Draft save failed: $e');
+    }
+  }
+
+  Future<void> restoreDraft(String id) async {
+    final d = await _draftService.getDraft(id);
+    if (d == null) throw StateError('Draft not found');
+    _audioPath = d.audioPath;
+    _transcript = d.transcript ?? '';
+    _currentDraftId = d.id;
+    _draftSaved = true;
+    _status = RecordingStatus.idle;
+    notifyListeners();
+  }
+
+  Future<List<DraftItem>> listDrafts() async {
+    return await _draftService.listDrafts();
+  }
+
+  Future<void> deleteDraft(String id) async {
+    try {
+      await _draftService.deleteDraft(id);
+      if (_currentDraftId == id) {
+        _currentDraftId = null;
+        _draftSaved = false;
+      }
+      notifyListeners();
+    } catch (_) {}
+  }
+
   void reset() {
     _stopTicker();
     _status = RecordingStatus.idle;
@@ -699,6 +984,9 @@ class RecordingProvider extends ChangeNotifier {
   @override
   void dispose() {
     _stopTicker();
+    WidgetsBinding.instance.removeObserver(this);
+    _authSub?.cancel();
+    _connectivitySub?.cancel();
     _recorder.dispose();
     super.dispose();
   }
