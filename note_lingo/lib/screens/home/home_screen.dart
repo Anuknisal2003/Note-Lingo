@@ -76,7 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
               right: -40,
               child: _Orb(
                 size: 200,
-                color: const Color(0xFF5AA0F8).withOpacity(0.20),
+                color: const Color(0xFF5AA0F8).withValues(alpha: 0.20),
               ),
             ),
             Positioned(
@@ -84,13 +84,13 @@ class _HomeScreenState extends State<HomeScreen> {
               left: -45,
               child: _Orb(
                 size: 140,
-                color: const Color(0xFF88BFFB).withOpacity(0.16),
+                color: const Color(0xFF88BFFB).withValues(alpha: 0.16),
               ),
             ),
             Positioned(
               bottom: size.height * 0.22,
               right: 10,
-              child: _Orb(size: 80, color: _deep.withOpacity(0.07)),
+              child: _Orb(size: 80, color: _deep.withValues(alpha: 0.07)),
             ),
 
             // ── Scrollable content on top ──────────────────────────
@@ -184,7 +184,7 @@ class _HomeBodyState extends State<_HomeBody> {
                               _greeting(),
                               style: TextStyle(
                                 fontSize: 13,
-                                color: _textDark.withOpacity(0.55),
+                                color: _textDark.withValues(alpha: 0.55),
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -242,7 +242,7 @@ class _HomeBodyState extends State<_HomeBody> {
                           '${displayNotes.length} notes',
                           style: TextStyle(
                             fontSize: 13,
-                            color: _textGrey.withOpacity(0.8),
+                            color: _textGrey.withValues(alpha: 0.8),
                           ),
                         ),
                     ],
@@ -337,7 +337,7 @@ class _WhiteSearchBar extends StatelessWidget {
         border: Border.all(color: _border, width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF4A7CF5).withOpacity(0.10),
+            color: const Color(0xFF4A7CF5).withValues(alpha: 0.10),
             blurRadius: 14,
             offset: const Offset(0, 4),
           ),
@@ -355,21 +355,21 @@ class _WhiteSearchBar extends StatelessWidget {
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: TextStyle(
-            color: _textGrey.withOpacity(0.55),
+            color: _textGrey.withValues(alpha: 0.55),
             fontSize: 14,
             fontWeight: FontWeight.w400,
           ),
           prefixIcon: Icon(
             Icons.search_rounded,
             size: 20,
-            color: _primary.withOpacity(0.70),
+            color: _primary.withValues(alpha: 0.70),
           ),
           suffixIcon: query.isNotEmpty
               ? IconButton(
                   icon: Icon(
                     Icons.close_rounded,
                     size: 18,
-                    color: _textGrey.withOpacity(0.65),
+                    color: _textGrey.withValues(alpha: 0.65),
                   ),
                   onPressed: () {
                     controller.clear();
@@ -435,12 +435,12 @@ class _StatTile extends StatelessWidget {
     child: Container(
       padding: const EdgeInsets.symmetric(vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.75),
+        color: Colors.white.withValues(alpha: 0.75),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: _border),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF4A7CF5).withOpacity(0.08),
+            color: const Color(0xFF4A7CF5).withValues(alpha: 0.08),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -460,7 +460,7 @@ class _StatTile extends StatelessWidget {
           ),
           Text(
             label,
-            style: TextStyle(fontSize: 11, color: _textGrey.withOpacity(0.8)),
+            style: TextStyle(fontSize: 11, color: _textGrey.withValues(alpha: 0.8)),
           ),
         ],
       ),
@@ -490,7 +490,7 @@ class _RecordBanner extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: _primary.withOpacity(0.35),
+            color: _primary.withValues(alpha: 0.35),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -502,7 +502,7 @@ class _RecordBanner extends StatelessWidget {
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.18),
+              color: Colors.white.withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(14),
             ),
             child: const Icon(Icons.mic_rounded, color: Colors.white, size: 26),
@@ -525,7 +525,7 @@ class _RecordBanner extends StatelessWidget {
                   'Tap to record — AI handles the rest',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.white.withOpacity(0.78),
+                    color: Colors.white.withValues(alpha: 0.78),
                   ),
                 ),
               ],
@@ -533,7 +533,7 @@ class _RecordBanner extends StatelessWidget {
           ),
           Icon(
             Icons.arrow_forward_ios_rounded,
-            color: Colors.white.withOpacity(0.80),
+            color: Colors.white.withValues(alpha: 0.80),
             size: 16,
           ),
         ],
@@ -558,7 +558,7 @@ class _RecordFab extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       boxShadow: [
         BoxShadow(
-          color: _primary.withOpacity(0.40),
+          color: _primary.withValues(alpha: 0.40),
           blurRadius: 16,
           offset: const Offset(0, 6),
         ),
@@ -621,7 +621,7 @@ class _AvatarBtn extends StatelessWidget {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: _primary.withOpacity(0.30),
+            color: _primary.withValues(alpha: 0.30),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -658,7 +658,7 @@ class _EmptyState extends StatelessWidget {
           width: 72,
           height: 72,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.80),
+            color: Colors.white.withValues(alpha: 0.80),
             shape: BoxShape.circle,
             border: Border.all(color: _border),
           ),
@@ -682,7 +682,7 @@ class _EmptyState extends StatelessWidget {
           hasSearch
               ? 'Try different keywords'
               : 'Tap Record to create your first AI-powered note',
-          style: TextStyle(fontSize: 14, color: _textGrey.withOpacity(0.85)),
+          style: TextStyle(fontSize: 14, color: _textGrey.withValues(alpha: 0.85)),
           textAlign: TextAlign.center,
         ),
       ],
@@ -707,7 +707,7 @@ class _LoadingSkeleton extends StatelessWidget {
           height: 110,
           margin: const EdgeInsets.only(bottom: 12),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.65),
+            color: Colors.white.withValues(alpha: 0.65),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: _border),
           ),
@@ -729,11 +729,11 @@ class _BottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     decoration: BoxDecoration(
-      color: Colors.white.withOpacity(0.92),
+      color: Colors.white.withValues(alpha: 0.92),
       border: Border(top: BorderSide(color: _border, width: 1)),
       boxShadow: [
         BoxShadow(
-          color: const Color(0xFF4A7CF5).withOpacity(0.08),
+          color: const Color(0xFF4A7CF5).withValues(alpha: 0.08),
           blurRadius: 12,
           offset: const Offset(0, -3),
         ),
@@ -798,7 +798,7 @@ class _NavItem extends StatelessWidget {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
           decoration: BoxDecoration(
-            color: active ? _primary.withOpacity(0.12) : Colors.transparent,
+            color: active ? _primary.withValues(alpha: 0.12) : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(
@@ -837,7 +837,7 @@ class _Orb extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: RadialGradient(colors: [color, color.withOpacity(0)]),
+        gradient: RadialGradient(colors: [color, color.withValues(alpha: 0)]),
       ),
     ),
   );
