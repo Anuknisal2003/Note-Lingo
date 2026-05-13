@@ -155,10 +155,11 @@ class EnhancedAiService {
       // Parse sentiment from response
       final lowerContent = content.toLowerCase();
       String sentiment = 'neutral';
-      if (lowerContent.contains('positive'))
+      if (lowerContent.contains('positive')) {
         sentiment = 'positive';
-      else if (lowerContent.contains('negative'))
+      } else if (lowerContent.contains('negative')) {
         sentiment = 'negative';
+      }
 
       return {
         'sentiment': sentiment,
@@ -599,11 +600,8 @@ class EnhancedAiService {
                 {
                   'role': 'user',
                   'content':
-                      'Translate the following text to $targetLang:\n\n' +
-                      text.substring(
-                        0,
-                        text.length > 3000 ? 3000 : text.length,
-                      ),
+                      'Translate the following text to $targetLang:\n\n'
+                      '${text.substring(0, text.length > 3000 ? 3000 : text.length)}',
                 },
               ],
               'temperature': 0.0,
