@@ -4,6 +4,7 @@ import '../../models/note_model.dart';
 import '../../providers/notes_provider.dart';
 import '../../providers/recording_provider.dart';
 import '../../providers/language_provider.dart';
+import '../../services/offline_queue_service.dart';
 import '../note_detail/note_detail_screen.dart';
 
 // ── Palette ────────────────────────────────────────────────────────
@@ -32,6 +33,10 @@ class _RecordingScreenState extends State<RecordingScreen>
   late AnimationController _waveCtrl;
   late Animation<double> _pulseAnim;
   NoteCategory _category = NoteCategory.lecture;
+  RecordingQuality _quality = RecordingQuality.high;
+  bool _vadEnabled = true;
+  String _denoiseMethod = 'auto'; // 'auto', 'light', 'spectral', 'aggressive'
+  double _denoiseStrength = 1.0; // 0.5 to 1.5
 
   @override
   void initState() {
@@ -52,6 +57,330 @@ class _RecordingScreenState extends State<RecordingScreen>
     _pulseCtrl.dispose();
     _waveCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _showDraftsSheet(BuildContext context) async {
+    final rp = context.read<RecordingProvider>();
+    final drafts = await rp.listDrafts();
+    if (!mounted) return;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: _cardBg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Drafts',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 12),
+            if (drafts.isEmpty) ...[
+              const Text('No drafts available.'),
+            ] else ...[
+              SizedBox(
+                height: 240,
+                child: ListView.separated(
+                  itemCount: drafts.length,
+                  separatorBuilder: (_, __) => const Divider(),
+                  itemBuilder: (_, i) {
+                    final d = drafts[i];
+                    final t = d.updatedAt.toLocal().toString();
+                    return ListTile(
+                      title: Text('Draft ${d.id.substring(0, 8)}'),
+                      subtitle: Text(t),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          TextButton(
+                            onPressed: () async {
+                              Navigator.pop(context);
+                              await rp.restoreDraft(d.id);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Draft restored')),
+                              );
+                            },
+                            style: TextButton.styleFrom(
+                              foregroundColor: _primary,
+                            ),
+                            child: const Text('Restore'),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline),
+                            color: _primary,
+                            onPressed: () async {
+                              await rp.deleteDraft(d.id);
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Draft deleted')),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showOfflineItemsSheet(BuildContext context) async {
+    final rp = context.read<RecordingProvider>();
+    final pending = await rp.getPendingItems();
+    final backoff = await rp.getBackoffItems();
+    final failed = await rp.getFailedItems();
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: _cardBg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setModalState) => SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Offline Items',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  ),
+                  if (pending.isNotEmpty)
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        Navigator.pop(ctx);
+                        await rp.syncOfflineQueue();
+                        await Future.delayed(const Duration(seconds: 2));
+                        if (mounted) _showOfflineItemsSheet(context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _primary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      icon: const Icon(Icons.cloud_upload, size: 16),
+                      label: const Text('Sync Now'),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              if (pending.isEmpty && backoff.isEmpty && failed.isEmpty) ...[
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 32),
+                    child: Text(
+                      'No offline items',
+                      style: TextStyle(color: _textGrey),
+                    ),
+                  ),
+                ),
+              ] else ...[
+                // Pending items (ready to sync)
+                if (pending.isNotEmpty) ...[
+                  const Text(
+                    'Ready to Sync',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: _primary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: _primary.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: _primary.withOpacity(0.2)),
+                    ),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: pending.length,
+                      separatorBuilder: (_, __) =>
+                          Divider(height: 1, color: _border.withOpacity(0.5)),
+                      itemBuilder: (_, i) =>
+                          _OfflineItemTile(item: pending[i], rp: rp),
+                    ),
+                  ),
+                ],
+                if (pending.isNotEmpty && backoff.isNotEmpty)
+                  const SizedBox(height: 16),
+                // Backoff items (waiting to retry)
+                if (backoff.isNotEmpty) ...[
+                  const Text(
+                    'Waiting to Retry',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: _warning,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: _warning.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: _warning.withOpacity(0.2)),
+                    ),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: backoff.length,
+                      separatorBuilder: (_, __) =>
+                          Divider(height: 1, color: _border.withOpacity(0.5)),
+                      itemBuilder: (_, i) =>
+                          _OfflineItemTile(item: backoff[i], rp: rp),
+                    ),
+                  ),
+                ],
+                if (failed.isNotEmpty) ...[
+                  if (pending.isNotEmpty || backoff.isNotEmpty)
+                    const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Failed (max retries reached)',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: _error,
+                        ),
+                      ),
+                      // Retry all failed
+                      TextButton.icon(
+                        onPressed: () async {
+                          for (final item in failed) {
+                            await rp.resetFailedItem(item.id);
+                          }
+                          Navigator.pop(ctx);
+                          await Future.delayed(
+                            const Duration(milliseconds: 300),
+                          );
+                          if (mounted) {
+                            await rp.syncOfflineQueue();
+                            _showOfflineItemsSheet(context);
+                          }
+                        },
+                        style: TextButton.styleFrom(
+                          foregroundColor: _error,
+                          padding: EdgeInsets.zero,
+                        ),
+                        icon: const Icon(Icons.refresh, size: 14),
+                        label: const Text(
+                          'Retry All',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: _error.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: _error.withOpacity(0.2)),
+                    ),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: failed.length,
+                      separatorBuilder: (_, __) =>
+                          Divider(height: 1, color: _border.withOpacity(0.5)),
+                      itemBuilder: (_, i) {
+                        final item = failed[i];
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: _OfflineItemTile(item: item, rp: rp),
+                              ),
+                              TextButton(
+                                onPressed: () async {
+                                  await rp.resetFailedItem(item.id);
+                                  Navigator.pop(ctx);
+                                  await Future.delayed(
+                                    const Duration(milliseconds: 300),
+                                  );
+                                  if (mounted) {
+                                    await rp.syncOfflineQueue();
+                                    _showOfflineItemsSheet(context);
+                                  }
+                                },
+                                style: TextButton.styleFrom(
+                                  foregroundColor: _primary,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                  ),
+                                ),
+                                child: const Text('Retry'),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ],
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _manualSyncOfflineItems() async {
+    final rp = context.read<RecordingProvider>();
+    if (rp.offlineQueueCount == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No offline items to sync.')),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Sync started...')));
+    await rp.syncOfflineQueue();
+    if (!mounted) return;
+    await rp.updateOfflineQueueCount();
+    if (!mounted) return;
+
+    final count = rp.offlineQueueCount;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          count == 0
+              ? 'All offline items synced successfully.'
+              : '$count item(s) still pending (retry/backoff).',
+        ),
+      ),
+    );
   }
 
   Future<void> _onStop(RecordingProvider rp, String language) async {
@@ -114,17 +443,16 @@ class _RecordingScreenState extends State<RecordingScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text(
-              'Keep Recording',
-              style: TextStyle(color: _primary),
-            ),
+            style: TextButton.styleFrom(foregroundColor: _primary),
+            child: const Text('Keep Recording'),
           ),
           TextButton(
             onPressed: () {
               rp.cancelRecording();
               Navigator.pop(context, true);
             },
-            child: const Text('Discard', style: TextStyle(color: _error)),
+            style: TextButton.styleFrom(foregroundColor: _primary),
+            child: const Text('Discard'),
           ),
         ],
       ),
@@ -176,6 +504,9 @@ class _RecordingScreenState extends State<RecordingScreen>
                             Icons.close_rounded,
                             color: _textDark,
                           ),
+                          style: IconButton.styleFrom(
+                            foregroundColor: _primary,
+                          ),
                           onPressed: () async {
                             final ok = await _confirmDiscard(rp);
                             if (ok && mounted) Navigator.pop(context);
@@ -197,9 +528,128 @@ class _RecordingScreenState extends State<RecordingScreen>
                           onChanged: (v) => lang.setLanguage(v),
                         ),
                         const SizedBox(width: 8),
+                        // Drafts indicator + sheet
+                        GestureDetector(
+                          onTap: () => _showDraftsSheet(context),
+                          child: Stack(
+                            alignment: Alignment.topRight,
+                            children: [
+                              Icon(Icons.save_rounded, color: _textDark),
+                              if (rp.draftSaved)
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  margin: const EdgeInsets.only(
+                                    right: 2,
+                                    top: 2,
+                                  ),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Offline items indicator + sheet
+                        GestureDetector(
+                          onTap: () => _showOfflineItemsSheet(context),
+                          child: Stack(
+                            alignment: Alignment.topRight,
+                            children: [
+                              Icon(Icons.cloud_off_rounded, color: _textDark),
+                              if (rp.offlineQueueCount > 0)
+                                Container(
+                                  width: 18,
+                                  height: 18,
+                                  decoration: BoxDecoration(
+                                    color: _error,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: _error.withOpacity(0.3),
+                                        blurRadius: 4,
+                                      ),
+                                    ],
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      rp.offlineQueueCount > 9
+                                          ? '9+'
+                                          : '${rp.offlineQueueCount}',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
                       ],
                     ),
                   ),
+
+                  if (rp.offlineQueueCount > 0)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _cardBg.withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: _border),
+                          boxShadow: [
+                            BoxShadow(
+                              color: _primary.withOpacity(0.08),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.wifi_find,
+                              size: 18,
+                              color: _primary,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                '${rp.offlineQueueCount} offline item(s) pending',
+                                style: const TextStyle(
+                                  color: _textDark,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            TextButton.icon(
+                              onPressed: rp.isProcessing
+                                  ? null
+                                  : _manualSyncOfflineItems,
+                              style: TextButton.styleFrom(
+                                foregroundColor: _primary,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
+                              ),
+                              icon: const Icon(Icons.sync, size: 16),
+                              label: const Text('Sync Now'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
 
                   Expanded(
                     child: SingleChildScrollView(
@@ -264,6 +714,22 @@ class _RecordingScreenState extends State<RecordingScreen>
                               selected: _category,
                               onChanged: (c) => setState(() => _category = c),
                             ),
+                            const SizedBox(height: 12),
+                            // Quality & audio options
+                            _QualityAndAudioOptions(
+                              quality: _quality,
+                              vadEnabled: _vadEnabled,
+                              denoiseMethod: _denoiseMethod,
+                              denoiseStrength: _denoiseStrength,
+                              onQualityChanged: (q) =>
+                                  setState(() => _quality = q),
+                              onVadChanged: (v) =>
+                                  setState(() => _vadEnabled = v),
+                              onDenoiseMethodChanged: (m) =>
+                                  setState(() => _denoiseMethod = m),
+                              onDenoiseStrengthChanged: (s) =>
+                                  setState(() => _denoiseStrength = s),
+                            ),
                             const SizedBox(height: 28),
                           ],
 
@@ -285,7 +751,13 @@ class _RecordingScreenState extends State<RecordingScreen>
                     isRecording: rp.isRecording,
                     isPaused: rp.isPaused,
                     isProcessing: rp.isProcessing,
-                    onStart: () => rp.startRecording(),
+                    onStart: () => rp.startRecordingWithOptions(
+                      quality: _quality,
+                      vadEnabled: _vadEnabled,
+                      noiseCancellation: false,
+                      denoiseMethod: _denoiseMethod,
+                      denoiseStrength: _denoiseStrength,
+                    ),
                     onPause: () => rp.pauseRecording(),
                     onResume: () => rp.resumeRecording(),
                     onStop: () => _onStop(rp, lang.selectedLanguage),
@@ -298,6 +770,178 @@ class _RecordingScreenState extends State<RecordingScreen>
       ),
     );
   }
+}
+
+class _QualityAndAudioOptions extends StatelessWidget {
+  final RecordingQuality quality;
+  final bool vadEnabled;
+  final String denoiseMethod;
+  final double denoiseStrength;
+  final ValueChanged<RecordingQuality> onQualityChanged;
+  final ValueChanged<bool> onVadChanged;
+  final ValueChanged<String> onDenoiseMethodChanged;
+  final ValueChanged<double> onDenoiseStrengthChanged;
+
+  const _QualityAndAudioOptions({
+    required this.quality,
+    required this.vadEnabled,
+    required this.denoiseMethod,
+    required this.denoiseStrength,
+    required this.onQualityChanged,
+    required this.onVadChanged,
+    required this.onDenoiseMethodChanged,
+    required this.onDenoiseStrengthChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text(
+        'Recording Quality',
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+          color: _textDark,
+        ),
+      ),
+      const SizedBox(height: 8),
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: _cardBg.withOpacity(0.82),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: _border),
+        ),
+        child: DropdownButton<RecordingQuality>(
+          value: quality,
+          isExpanded: true,
+          underline: const SizedBox.shrink(),
+          dropdownColor: _cardBg,
+          style: const TextStyle(
+            color: _textDark,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+          items: const [
+            DropdownMenuItem(value: RecordingQuality.low, child: Text('Low')),
+            DropdownMenuItem(
+              value: RecordingQuality.medium,
+              child: Text('Medium'),
+            ),
+            DropdownMenuItem(value: RecordingQuality.high, child: Text('High')),
+          ],
+          onChanged: (v) {
+            if (v != null) onQualityChanged(v);
+          },
+        ),
+      ),
+      const SizedBox(height: 12),
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: _cardBg.withOpacity(0.82),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: _border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Expanded(
+              child: Text(
+                'VAD (auto-stop)',
+                style: TextStyle(color: _textGrey, fontWeight: FontWeight.w600),
+              ),
+            ),
+            Switch(
+              value: vadEnabled,
+              activeColor: _primary,
+              activeTrackColor: _primary.withOpacity(0.35),
+              onChanged: onVadChanged,
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 16),
+      // Denoise method selector
+      const Text(
+        'Noise Reduction',
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+          color: _textDark,
+        ),
+      ),
+      const SizedBox(height: 8),
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: _cardBg.withOpacity(0.82),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: _border),
+        ),
+        child: DropdownButton<String>(
+          value: denoiseMethod,
+          isExpanded: true,
+          underline: const SizedBox.shrink(),
+          dropdownColor: _cardBg,
+          style: const TextStyle(
+            color: _textDark,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+          items: const [
+            DropdownMenuItem(value: 'auto', child: Text('Auto')),
+            DropdownMenuItem(value: 'light', child: Text('Light')),
+            DropdownMenuItem(value: 'spectral', child: Text('Spectral')),
+            DropdownMenuItem(value: 'aggressive', child: Text('Aggressive')),
+          ],
+          onChanged: (v) {
+            if (v != null) onDenoiseMethodChanged(v);
+          },
+        ),
+      ),
+      const SizedBox(height: 12),
+      // Denoise strength slider
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: _cardBg.withOpacity(0.82),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: _border),
+        ),
+        child: Row(
+          children: [
+            Text(
+              'Strength: ${denoiseStrength.toStringAsFixed(1)}x',
+              style: const TextStyle(
+                fontSize: 12,
+                color: _textGrey,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Expanded(
+              child: SliderTheme(
+                data: SliderTheme.of(context).copyWith(
+                  activeTrackColor: _primary,
+                  inactiveTrackColor: _border,
+                  thumbColor: _primary,
+                  overlayColor: _primary.withOpacity(0.15),
+                ),
+                child: Slider(
+                  value: denoiseStrength,
+                  min: 0.5,
+                  max: 1.5,
+                  divisions: 5,
+                  onChanged: onDenoiseStrengthChanged,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
 }
 
 // ── Visualizer ────────────────────────────────────────────────────
@@ -616,9 +1260,9 @@ class _Controls extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     padding: EdgeInsets.fromLTRB(
-      32,
+      8,
       20,
-      32,
+      8,
       MediaQuery.of(context).padding.bottom + 28,
     ),
     decoration: BoxDecoration(
@@ -633,77 +1277,60 @@ class _Controls extends StatelessWidget {
         ),
       ],
     ),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        if (!isRecording && !isPaused && !isProcessing)
-          _CtrlBtn(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF6BAAF8), _deep],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+    child: SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          if (!isRecording && !isPaused && !isProcessing)
+            _CtrlBtn(
+              color: _primary,
+              icon: Icons.mic_rounded,
+              size: 72,
+              label: 'Start',
+              onTap: onStart,
+            )
+          else if (isProcessing)
+            _CtrlBtn(
+              color: _primary,
+              icon: Icons.auto_awesome_rounded,
+              size: 72,
+              label: 'AI Processing…',
+              onTap: null,
+            )
+          else ...[
+            _CtrlBtn(
+              color: _primary,
+              icon: isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+              iconColor: Colors.white,
+              size: 56,
+              label: isPaused ? 'Resume' : 'Pause',
+              onTap: isPaused ? onResume : onPause,
             ),
-            glowColor: _primary,
-            icon: Icons.mic_rounded,
-            size: 72,
-            label: 'Start',
-            onTap: onStart,
-          )
-        else if (isProcessing)
-          _CtrlBtn(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF6BAAF8), _deep],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+            const SizedBox(width: 24),
+            _CtrlBtn(
+              color: _primary,
+              icon: Icons.stop_rounded,
+              size: 72,
+              label: 'Done',
+              onTap: onStop,
             ),
-            glowColor: _primary,
-            icon: Icons.auto_awesome_rounded,
-            size: 72,
-            label: 'AI Processing…',
-            onTap: null,
-          )
-        else ...[
-          _CtrlBtn(
-            color: const Color(0xFFF0F5FF),
-            borderColor: _border,
-            icon: isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
-            iconColor: _textDark,
-            size: 56,
-            label: isPaused ? 'Resume' : 'Pause',
-            onTap: isPaused ? onResume : onPause,
-          ),
-          const SizedBox(width: 24),
-          _CtrlBtn(
-            gradient: const LinearGradient(
-              colors: [Color(0xFFFF5370), Color(0xFFFF2D55)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            glowColor: _error,
-            icon: Icons.stop_rounded,
-            size: 72,
-            label: 'Done',
-            onTap: onStop,
-          ),
+          ],
         ],
-      ],
+      ),
     ),
   );
 }
 
 class _CtrlBtn extends StatelessWidget {
-  final LinearGradient? gradient;
-  final Color? color, borderColor, glowColor, iconColor;
+  final Color? color, iconColor;
   final IconData icon;
   final double size;
   final String label;
   final VoidCallback? onTap;
 
   const _CtrlBtn({
-    this.gradient,
     this.color,
-    this.borderColor,
-    this.glowColor,
     required this.icon,
     this.iconColor,
     required this.size,
@@ -720,22 +1347,16 @@ class _CtrlBtn extends StatelessWidget {
           width: size,
           height: size,
           decoration: BoxDecoration(
-            gradient: gradient,
             color: color,
             shape: BoxShape.circle,
-            border: borderColor != null
-                ? Border.all(color: borderColor!, width: 1.5)
-                : null,
-            boxShadow: glowColor != null
-                ? [
-                    BoxShadow(
-                      color: glowColor!.withOpacity(0.32),
-                      blurRadius: 20,
-                      spreadRadius: 2,
-                      offset: const Offset(0, 6),
-                    ),
-                  ]
-                : null,
+            boxShadow: [
+              BoxShadow(
+                color: _primary.withOpacity(0.24),
+                blurRadius: 18,
+                spreadRadius: 1,
+                offset: const Offset(0, 6),
+              ),
+            ],
           ),
           child: Icon(
             icon,
@@ -893,6 +1514,169 @@ class _LanguageSheet extends StatelessWidget {
             );
           }),
           const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Offline Item Tile ─────────────────────────────────────────────
+
+class _OfflineItemTile extends StatelessWidget {
+  final OfflineQueueItem item;
+  final RecordingProvider rp;
+
+  const _OfflineItemTile({required this.item, required this.rp});
+
+  String _getCategoryEmoji(NoteCategory cat) {
+    switch (cat) {
+      case NoteCategory.lecture:
+        return '🎓';
+      case NoteCategory.meeting:
+        return '👥';
+      case NoteCategory.interview:
+        return '🎤';
+      case NoteCategory.personal:
+        return '💭';
+      case NoteCategory.other:
+        return '📝';
+    }
+  }
+
+  String _formatDuration(int seconds) {
+    final mins = seconds ~/ 60;
+    final secs = seconds % 60;
+    return '${mins}m ${secs}s';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isReady = item.isReadyToRetry();
+    final delaySeconds = item.getRetryDelaySeconds();
+    final created = item.createdAt;
+    final now = DateTime.now();
+    final diff = now.difference(created);
+    final durStr = _formatDuration(diff.inSeconds);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                _getCategoryEmoji(item.category),
+                style: const TextStyle(fontSize: 16),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            item.category.name.toUpperCase(),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: _textGrey,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: item.language == 'en'
+                                ? Colors.green.withOpacity(0.1)
+                                : Colors.blue.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            item.language.toUpperCase(),
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: item.language == 'en'
+                                  ? Colors.green.shade700
+                                  : Colors.blue.shade700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Recording: $durStr',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: _textDark,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isReady
+                          ? Colors.green.withOpacity(0.15)
+                          : _warning.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      isReady ? 'Ready' : 'Waiting',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: isReady
+                            ? Colors.green.shade700
+                            : Colors.orange.shade700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Retry ${item.retries}/3',
+                    style: const TextStyle(fontSize: 10, color: _textGrey),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          if (!isReady && delaySeconds > 0) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Retrying in ${delaySeconds}s...',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: _warning,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
