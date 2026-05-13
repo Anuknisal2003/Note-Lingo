@@ -1,240 +1,145 @@
+// lib/providers/collaboration_provider.dart
+// State management for collaboration features (sharing, commenting, groups)
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+
+import '../models/comment_model.dart';
+import '../models/note_model.dart';
 import '../services/collaboration_service.dart';
 
 class CollaborationProvider extends ChangeNotifier {
-  final CollaborationService _service = CollaborationService();
+  final CollaborationService _collaboration = CollaborationService();
 
+  List<NoteModel> _sharedNotes = [];
+  List<CommentModel> _comments = [];
+  List<String> _onlineUsers = [];
   bool _isLoading = false;
-  String? _error;
+  String? _errorMessage;
 
-  // State
-  List<Comment> _comments = [];
-  List<SharedAccess> _sharedWith = [];
-  List<StudyGroup> _userGroups = [];
-  StudyGroup? _currentGroup;
-
-  // Getters
+  List<NoteModel> get sharedNotes => _sharedNotes;
+  List<CommentModel> get comments => _comments;
+  List<String> get onlineUsers => _onlineUsers;
   bool get isLoading => _isLoading;
-  String? get error => _error;
-  List<Comment> get comments => _comments;
-  List<SharedAccess> get sharedWith => _sharedWith;
-  List<StudyGroup> get userGroups => _userGroups;
-  StudyGroup? get currentGroup => _currentGroup;
+  String? get errorMessage => _errorMessage;
+  String? get error => _errorMessage;
 
-  /// Load comments for note
-  Future<void> loadComments(String noteId) async {
-    try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
-
-      _comments = await _service.getComments(noteId);
-      notifyListeners();
-    } catch (e) {
-      _error = 'Failed to load comments: $e';
-      notifyListeners();
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  /// Add comment
-  Future<void> addComment(
-    String noteId,
-    String content, {
-    int lineNumber = 0,
-  }) async {
-    try {
-      _error = null;
-      await _service.addComment(noteId, content, lineNumber: lineNumber);
-
-      // Reload comments
-      await loadComments(noteId);
-    } catch (e) {
-      _error = 'Failed to add comment: $e';
-      notifyListeners();
-    }
-  }
-
-  /// Toggle like on comment
-  Future<void> toggleCommentLike(String noteId, String commentId) async {
-    try {
-      _error = null;
-      await _service.toggleCommentLike(noteId, commentId);
-
-      // Reload comments
-      await loadComments(noteId);
-    } catch (e) {
-      _error = 'Failed to toggle like: $e';
-      notifyListeners();
-    }
-  }
-
-  /// Delete comment
-  Future<void> deleteComment(String noteId, String commentId) async {
-    try {
-      _error = null;
-      await _service.deleteComment(noteId, commentId);
-
-      // Reload comments
-      await loadComments(noteId);
-    } catch (e) {
-      _error = 'Failed to delete comment: $e';
-      notifyListeners();
-    }
-  }
-
-  /// Share note
   Future<void> shareNote(
     String noteId,
-    List<String> emails, {
-    String role = 'viewer',
-  }) async {
+    String targetUserEmail,
+    String accessLevel,
+  ) async {
     try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
-
-      await _service.shareNote(noteId, emails, role: role);
-
-      // Load access list
-      await loadNoteAccess(noteId);
+      _setLoading(true);
+      await _collaboration.shareNote(noteId, targetUserEmail, accessLevel);
+      await loadSharedNotes();
     } catch (e) {
-      _error = 'Failed to share note: $e';
-      notifyListeners();
+      _setError('Failed to share note: $e');
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      _setLoading(false);
     }
   }
 
-  /// Load note access
-  Future<void> loadNoteAccess(String noteId) async {
+  Future<void> loadSharedNotes() async {
     try {
-      _error = null;
-      _sharedWith = await _service.getNoteAccess(noteId);
+      _setLoading(true);
+      _sharedNotes = await _collaboration.getSharedWithMe();
+      _errorMessage = null;
       notifyListeners();
     } catch (e) {
-      _error = 'Failed to load access: $e';
-      notifyListeners();
-    }
-  }
-
-  /// Revoke access
-  Future<void> revokeAccess(String noteId, String email) async {
-    try {
-      _error = null;
-      await _service.revokeAccess(noteId, email);
-      await loadNoteAccess(noteId);
-    } catch (e) {
-      _error = 'Failed to revoke access: $e';
-      notifyListeners();
-    }
-  }
-
-  /// Create study group
-  Future<String?> createStudyGroup(
-    String name,
-    String description, {
-    int memberLimit = 50,
-  }) async {
-    try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
-
-      final groupId = await _service.createStudyGroup(
-        name,
-        description,
-        memberLimit: memberLimit,
-      );
-
-      // Reload groups
-      await loadUserGroups();
-      return groupId;
-    } catch (e) {
-      _error = 'Failed to create group: $e';
-      notifyListeners();
-      return null;
+      _setError('Failed to load shared notes: $e');
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      _setLoading(false);
     }
   }
 
-  /// Load user's study groups
-  Future<void> loadUserGroups() async {
+  Future<void> revokeAccess(String noteId, String userEmail) async {
     try {
-      _error = null;
-      _userGroups = await _service.getUserStudyGroups();
+      await _collaboration.revokeAccess(noteId, userEmail);
       notifyListeners();
     } catch (e) {
-      _error = 'Failed to load groups: $e';
-      notifyListeners();
+      _setError('Failed to revoke access: $e');
     }
   }
 
-  /// Load specific study group
-  Future<void> loadStudyGroup(String groupId) async {
+  Future<void> addComment(String noteId, String content) async {
     try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
+      await _collaboration.addComment(noteId, content);
+      await loadComments(noteId);
+    } catch (e) {
+      _setError('Failed to add comment: $e');
+    }
+  }
 
-      _currentGroup = await _service.getStudyGroup(groupId);
+  Future<void> loadComments(String noteId) async {
+    try {
+      _comments = await _collaboration.getCommentsStream(noteId).first;
+      _errorMessage = null;
       notifyListeners();
     } catch (e) {
-      _error = 'Failed to load group: $e';
-      notifyListeners();
-    } finally {
-      _isLoading = false;
-      notifyListeners();
+      _setError('Failed to load comments: $e');
     }
   }
 
-  /// Join study group
-  Future<void> joinStudyGroup(String groupId) async {
+  Future<void> toggleCommentLike(String noteId, String commentId) async {
     try {
-      _error = null;
-      await _service.joinStudyGroup(groupId);
-      await loadUserGroups();
-    } catch (e) {
-      _error = 'Failed to join group: $e';
-      notifyListeners();
-    }
-  }
-
-  /// Leave study group
-  Future<void> leaveStudyGroup(String groupId) async {
-    try {
-      _error = null;
-      await _service.leaveStudyGroup(groupId);
-      await loadUserGroups();
-      if (_currentGroup?.id == groupId) {
-        _currentGroup = null;
+      final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+      CommentModel? currentComment;
+      for (final comment in _comments) {
+        if (comment.id == commentId) {
+          currentComment = comment;
+          break;
+        }
       }
-      notifyListeners();
+
+      if (currentComment != null && currentComment.likedBy.contains(currentUserId)) {
+        await _collaboration.unlikeComment(noteId, commentId);
+      } else {
+        await _collaboration.likeComment(noteId, commentId);
+      }
+
+      await loadComments(noteId);
     } catch (e) {
-      _error = 'Failed to leave group: $e';
-      notifyListeners();
+      _setError('Failed to toggle like: $e');
     }
   }
 
-  /// Add note to group
-  Future<void> addNoteToGroup(String groupId, String noteId) async {
+  Future<void> deleteComment(String noteId, String commentId) async {
     try {
-      _error = null;
-      await _service.addNoteToGroup(groupId, noteId);
-      await loadStudyGroup(groupId);
-    } catch (e) {
-      _error = 'Failed to add note to group: $e';
+      await _collaboration.deleteComment(noteId, commentId);
+      _comments.removeWhere((comment) => comment.id == commentId);
       notifyListeners();
+    } catch (e) {
+      _setError('Failed to delete comment: $e');
     }
+  }
+
+  Future<void> likeComment(String noteId, String commentId) async {
+    try {
+      await _collaboration.likeComment(noteId, commentId);
+      await loadComments(noteId);
+    } catch (e) {
+      _setError('Failed to like comment: $e');
+    }
+  }
+
+  Stream<List<CommentModel>> watchComments(String noteId) {
+    return _collaboration.getCommentsStream(noteId);
+  }
+
+  void _setLoading(bool value) {
+    _isLoading = value;
+    notifyListeners();
+  }
+
+  void _setError(String message) {
+    _errorMessage = message;
+    debugPrint('[CollaborationProvider] Error: $message');
+    notifyListeners();
   }
 
   void clearError() {
-    _error = null;
+    _errorMessage = null;
     notifyListeners();
   }
 
