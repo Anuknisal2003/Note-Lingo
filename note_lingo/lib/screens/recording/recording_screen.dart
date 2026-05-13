@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../../models/note_model.dart';
 import '../../providers/notes_provider.dart';
 import '../../providers/recording_provider.dart';
-import '../../providers/language_provider.dart';
 import '../../services/offline_queue_service.dart';
 import '../note_detail/note_detail_screen.dart';
 
@@ -62,7 +61,7 @@ class _RecordingScreenState extends State<RecordingScreen>
   Future<void> _showDraftsSheet(BuildContext context) async {
     final rp = context.read<RecordingProvider>();
     final drafts = await rp.listDrafts();
-    if (!mounted) return;
+    if (!context.mounted) return;
     showModalBottomSheet(
       context: context,
       backgroundColor: _cardBg,
@@ -87,7 +86,7 @@ class _RecordingScreenState extends State<RecordingScreen>
                 height: 240,
                 child: ListView.separated(
                   itemCount: drafts.length,
-                  separatorBuilder: (_, __) => const Divider(),
+                  separatorBuilder: (_, _) => const Divider(),
                   itemBuilder: (_, i) {
                     final d = drafts[i];
                     final t = d.updatedAt.toLocal().toString();
@@ -101,6 +100,7 @@ class _RecordingScreenState extends State<RecordingScreen>
                             onPressed: () async {
                               Navigator.pop(context);
                               await rp.restoreDraft(d.id);
+                              if (!context.mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(content: Text('Draft restored')),
                               );
@@ -115,6 +115,7 @@ class _RecordingScreenState extends State<RecordingScreen>
                             color: _primary,
                             onPressed: () async {
                               await rp.deleteDraft(d.id);
+                              if (!context.mounted) return;
                               Navigator.pop(context);
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(content: Text('Draft deleted')),
@@ -140,7 +141,7 @@ class _RecordingScreenState extends State<RecordingScreen>
     final pending = await rp.getPendingItems();
     final backoff = await rp.getBackoffItems();
     final failed = await rp.getFailedItems();
-    if (!mounted) return;
+    if (!context.mounted) return;
 
     showModalBottomSheet(
       context: context,
@@ -169,7 +170,7 @@ class _RecordingScreenState extends State<RecordingScreen>
                         Navigator.pop(ctx);
                         await rp.syncOfflineQueue();
                         await Future.delayed(const Duration(seconds: 2));
-                        if (mounted) _showOfflineItemsSheet(context);
+                        if (context.mounted) _showOfflineItemsSheet(context);
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _primary,
@@ -207,16 +208,20 @@ class _RecordingScreenState extends State<RecordingScreen>
                   const SizedBox(height: 8),
                   Container(
                     decoration: BoxDecoration(
-                      color: _primary.withOpacity(0.05),
+                      color: _primary.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: _primary.withOpacity(0.2)),
+                      border: Border.all(
+                        color: _primary.withValues(alpha: 0.2),
+                      ),
                     ),
                     child: ListView.separated(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: pending.length,
-                      separatorBuilder: (_, __) =>
-                          Divider(height: 1, color: _border.withOpacity(0.5)),
+                      separatorBuilder: (_, _) => Divider(
+                        height: 1,
+                        color: _border.withValues(alpha: 0.5),
+                      ),
                       itemBuilder: (_, i) =>
                           _OfflineItemTile(item: pending[i], rp: rp),
                     ),
@@ -237,16 +242,20 @@ class _RecordingScreenState extends State<RecordingScreen>
                   const SizedBox(height: 8),
                   Container(
                     decoration: BoxDecoration(
-                      color: _warning.withOpacity(0.05),
+                      color: _warning.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: _warning.withOpacity(0.2)),
+                      border: Border.all(
+                        color: _warning.withValues(alpha: 0.2),
+                      ),
                     ),
                     child: ListView.separated(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: backoff.length,
-                      separatorBuilder: (_, __) =>
-                          Divider(height: 1, color: _border.withOpacity(0.5)),
+                      separatorBuilder: (_, _) => Divider(
+                        height: 1,
+                        color: _border.withValues(alpha: 0.5),
+                      ),
                       itemBuilder: (_, i) =>
                           _OfflineItemTile(item: backoff[i], rp: rp),
                     ),
@@ -272,13 +281,17 @@ class _RecordingScreenState extends State<RecordingScreen>
                           for (final item in failed) {
                             await rp.resetFailedItem(item.id);
                           }
+                          if (!context.mounted) return;
+                          // ignore: use_build_context_synchronously
                           Navigator.pop(ctx);
                           await Future.delayed(
                             const Duration(milliseconds: 300),
                           );
-                          if (mounted) {
+                          if (context.mounted) {
                             await rp.syncOfflineQueue();
-                            _showOfflineItemsSheet(context);
+                            // ignore: use_build_context_synchronously
+                            if (context.mounted)
+                              _showOfflineItemsSheet(context);
                           }
                         },
                         style: TextButton.styleFrom(
@@ -296,16 +309,18 @@ class _RecordingScreenState extends State<RecordingScreen>
                   const SizedBox(height: 8),
                   Container(
                     decoration: BoxDecoration(
-                      color: _error.withOpacity(0.05),
+                      color: _error.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: _error.withOpacity(0.2)),
+                      border: Border.all(color: _error.withValues(alpha: 0.2)),
                     ),
                     child: ListView.separated(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: failed.length,
-                      separatorBuilder: (_, __) =>
-                          Divider(height: 1, color: _border.withOpacity(0.5)),
+                      separatorBuilder: (_, _) => Divider(
+                        height: 1,
+                        color: _border.withValues(alpha: 0.5),
+                      ),
                       itemBuilder: (_, i) {
                         final item = failed[i];
                         return Padding(
@@ -321,13 +336,15 @@ class _RecordingScreenState extends State<RecordingScreen>
                               TextButton(
                                 onPressed: () async {
                                   await rp.resetFailedItem(item.id);
+                                  if (!context.mounted) return;
                                   Navigator.pop(ctx);
                                   await Future.delayed(
                                     const Duration(milliseconds: 300),
                                   );
-                                  if (mounted) {
+                                  if (context.mounted) {
                                     await rp.syncOfflineQueue();
-                                    _showOfflineItemsSheet(context);
+                                    if (context.mounted)
+                                      _showOfflineItemsSheet(context);
                                   }
                                 },
                                 style: TextButton.styleFrom(
@@ -383,8 +400,8 @@ class _RecordingScreenState extends State<RecordingScreen>
     );
   }
 
-  Future<void> _onStop(RecordingProvider rp, String language) async {
-    await rp.stopRecording(category: _category, language: language);
+  Future<void> _onStop(RecordingProvider rp) async {
+    await rp.stopRecording(category: _category, language: 'en');
     if (!mounted) return;
 
     if (rp.error != null) {
@@ -463,14 +480,13 @@ class _RecordingScreenState extends State<RecordingScreen>
   @override
   Widget build(BuildContext context) {
     final rp = context.watch<RecordingProvider>();
-    final lang = context.watch<LanguageProvider>();
 
     return PopScope(
       canPop: !rp.isRecording && !rp.isPaused,
       onPopInvokedWithResult: (didPop, _) async {
         if (!didPop) {
           final ok = await _confirmDiscard(rp);
-          if (ok && mounted) Navigator.pop(context);
+          if (ok && context.mounted) Navigator.pop(context);
         }
       },
       child: Scaffold(
@@ -509,7 +525,7 @@ class _RecordingScreenState extends State<RecordingScreen>
                           ),
                           onPressed: () async {
                             final ok = await _confirmDiscard(rp);
-                            if (ok && mounted) Navigator.pop(context);
+                            if (ok && context.mounted) Navigator.pop(context);
                           },
                         ),
                         const Expanded(
@@ -523,11 +539,6 @@ class _RecordingScreenState extends State<RecordingScreen>
                             ),
                           ),
                         ),
-                        _LanguagePill(
-                          value: lang.selectedLanguage,
-                          onChanged: (v) => lang.setLanguage(v),
-                        ),
-                        const SizedBox(width: 8),
                         // Drafts indicator + sheet
                         GestureDetector(
                           onTap: () => _showDraftsSheet(context),
@@ -568,7 +579,7 @@ class _RecordingScreenState extends State<RecordingScreen>
                                     shape: BoxShape.circle,
                                     boxShadow: [
                                       BoxShadow(
-                                        color: _error.withOpacity(0.3),
+                                        color: _error.withValues(alpha: 0.3),
                                         blurRadius: 4,
                                       ),
                                     ],
@@ -603,12 +614,12 @@ class _RecordingScreenState extends State<RecordingScreen>
                           vertical: 10,
                         ),
                         decoration: BoxDecoration(
-                          color: _cardBg.withOpacity(0.9),
+                          color: _cardBg.withValues(alpha: 0.9),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: _border),
                           boxShadow: [
                             BoxShadow(
-                              color: _primary.withOpacity(0.08),
+                              color: _primary.withValues(alpha: 0.08),
                               blurRadius: 10,
                               offset: const Offset(0, 3),
                             ),
@@ -760,7 +771,7 @@ class _RecordingScreenState extends State<RecordingScreen>
                     ),
                     onPause: () => rp.pauseRecording(),
                     onResume: () => rp.resumeRecording(),
-                    onStop: () => _onStop(rp, lang.selectedLanguage),
+                    onStop: () => _onStop(rp),
                   ),
                 ],
               ),
@@ -809,7 +820,7 @@ class _QualityAndAudioOptions extends StatelessWidget {
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
-          color: _cardBg.withOpacity(0.82),
+          color: _cardBg.withValues(alpha: 0.82),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: _border),
         ),
@@ -840,7 +851,7 @@ class _QualityAndAudioOptions extends StatelessWidget {
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: _cardBg.withOpacity(0.82),
+          color: _cardBg.withValues(alpha: 0.82),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: _border),
         ),
@@ -855,8 +866,8 @@ class _QualityAndAudioOptions extends StatelessWidget {
             ),
             Switch(
               value: vadEnabled,
-              activeColor: _primary,
-              activeTrackColor: _primary.withOpacity(0.35),
+              activeThumbColor: _primary,
+              activeTrackColor: _primary.withValues(alpha: 0.35),
               onChanged: onVadChanged,
             ),
           ],
@@ -876,7 +887,7 @@ class _QualityAndAudioOptions extends StatelessWidget {
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
-          color: _cardBg.withOpacity(0.82),
+          color: _cardBg.withValues(alpha: 0.82),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: _border),
         ),
@@ -906,7 +917,7 @@ class _QualityAndAudioOptions extends StatelessWidget {
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: _cardBg.withOpacity(0.82),
+          color: _cardBg.withValues(alpha: 0.82),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: _border),
         ),
@@ -926,7 +937,7 @@ class _QualityAndAudioOptions extends StatelessWidget {
                   activeTrackColor: _primary,
                   inactiveTrackColor: _border,
                   thumbColor: _primary,
-                  overlayColor: _primary.withOpacity(0.15),
+                  overlayColor: _primary.withValues(alpha: 0.15),
                 ),
                 child: Slider(
                   value: denoiseStrength,
@@ -967,13 +978,13 @@ class _RecordVisualizer extends StatelessWidget {
         if (isRecording && !isPaused) ...[
           AnimatedBuilder(
             animation: pulseAnim,
-            builder: (_, __) => Container(
+            builder: (_, _) => Container(
               width: 160 + pulseAnim.value * 36,
               height: 160 + pulseAnim.value * 36,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: _error.withOpacity(0.22 * (1 - pulseAnim.value)),
+                  color: _error.withValues(alpha: 0.22 * (1 - pulseAnim.value)),
                   width: 2,
                 ),
               ),
@@ -981,12 +992,12 @@ class _RecordVisualizer extends StatelessWidget {
           ),
           AnimatedBuilder(
             animation: pulseAnim,
-            builder: (_, __) => Container(
+            builder: (_, _) => Container(
               width: 130 + pulseAnim.value * 20,
               height: 130 + pulseAnim.value * 20,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: _error.withOpacity(0.05 + pulseAnim.value * 0.04),
+                color: _error.withValues(alpha: 0.05 + pulseAnim.value * 0.04),
               ),
             ),
           ),
@@ -996,7 +1007,7 @@ class _RecordVisualizer extends StatelessWidget {
             width: 140,
             height: 140,
             child: CircularProgressIndicator(
-              color: _primary.withOpacity(0.30),
+              color: _primary.withValues(alpha: 0.30),
               strokeWidth: 2,
             ),
           ),
@@ -1018,7 +1029,9 @@ class _RecordVisualizer extends StatelessWidget {
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: (isRecording ? _error : _primary).withOpacity(0.38),
+                color: (isRecording ? _error : _primary).withValues(
+                  alpha: 0.38,
+                ),
                 blurRadius: 28,
                 spreadRadius: 4,
               ),
@@ -1118,7 +1131,7 @@ class _CategorySelector extends StatelessWidget {
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
           itemCount: _cats.length,
-          separatorBuilder: (_, __) => const SizedBox(width: 8),
+          separatorBuilder: (_, _) => const SizedBox(width: 8),
           itemBuilder: (_, i) {
             final (cat, emoji, label) = _cats[i];
             final active = selected == cat;
@@ -1138,13 +1151,13 @@ class _CategorySelector extends StatelessWidget {
                           end: Alignment.bottomRight,
                         )
                       : null,
-                  color: active ? null : _cardBg.withOpacity(0.72),
+                  color: active ? null : _cardBg.withValues(alpha: 0.72),
                   borderRadius: BorderRadius.circular(23),
                   border: Border.all(color: active ? _primary : _border),
                   boxShadow: active
                       ? [
                           BoxShadow(
-                            color: _primary.withOpacity(0.28),
+                            color: _primary.withValues(alpha: 0.28),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
@@ -1186,12 +1199,12 @@ class _LiveTranscript extends StatelessWidget {
     constraints: const BoxConstraints(maxHeight: 160),
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
-      color: _cardBg.withOpacity(0.80),
+      color: _cardBg.withValues(alpha: 0.80),
       borderRadius: BorderRadius.circular(16),
       border: Border.all(color: _border),
       boxShadow: [
         BoxShadow(
-          color: const Color(0xFF4A7CF5).withOpacity(0.07),
+          color: const Color(0xFF4A7CF5).withValues(alpha: 0.07),
           blurRadius: 12,
           offset: const Offset(0, 4),
         ),
@@ -1266,12 +1279,12 @@ class _Controls extends StatelessWidget {
       MediaQuery.of(context).padding.bottom + 28,
     ),
     decoration: BoxDecoration(
-      color: Colors.white.withOpacity(0.88),
+      color: Colors.white.withValues(alpha: 0.88),
       border: Border(top: BorderSide(color: _border, width: 1)),
       borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       boxShadow: [
         BoxShadow(
-          color: const Color(0xFF4A7CF5).withOpacity(0.08),
+          color: const Color(0xFF4A7CF5).withValues(alpha: 0.08),
           blurRadius: 12,
           offset: const Offset(0, -3),
         ),
@@ -1351,7 +1364,7 @@ class _CtrlBtn extends StatelessWidget {
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: _primary.withOpacity(0.24),
+                color: _primary.withValues(alpha: 0.24),
                 blurRadius: 18,
                 spreadRadius: 1,
                 offset: const Offset(0, 6),
@@ -1369,7 +1382,7 @@ class _CtrlBtn extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: 12,
-            color: _textGrey.withOpacity(0.85),
+            color: _textGrey.withValues(alpha: 0.85),
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -1379,7 +1392,7 @@ class _CtrlBtn extends StatelessWidget {
 }
 
 // ── Language Pill ─────────────────────────────────────────────────
-
+// ignore: unused_element
 class _LanguagePill extends StatelessWidget {
   final String value;
   final ValueChanged<String> onChanged;
@@ -1404,7 +1417,7 @@ class _LanguagePill extends StatelessWidget {
     child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.72),
+        color: Colors.white.withValues(alpha: 0.72),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: _border),
       ),
@@ -1487,7 +1500,7 @@ class _LanguageSheet extends StatelessWidget {
                   vertical: 14,
                 ),
                 decoration: BoxDecoration(
-                  color: sel ? _primary.withOpacity(0.10) : Colors.white,
+                  color: sel ? _primary.withValues(alpha: 0.10) : Colors.white,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: sel ? _primary : _border),
                 ),
@@ -1596,8 +1609,8 @@ class _OfflineItemTile extends StatelessWidget {
                           ),
                           decoration: BoxDecoration(
                             color: item.language == 'en'
-                                ? Colors.green.withOpacity(0.1)
-                                : Colors.blue.withOpacity(0.1),
+                                ? Colors.green.withValues(alpha: 0.1)
+                                : Colors.blue.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -1636,8 +1649,8 @@ class _OfflineItemTile extends StatelessWidget {
                     ),
                     decoration: BoxDecoration(
                       color: isReady
-                          ? Colors.green.withOpacity(0.15)
-                          : _warning.withOpacity(0.15),
+                          ? Colors.green.withValues(alpha: 0.15)
+                          : _warning.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
