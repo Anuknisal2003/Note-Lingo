@@ -244,7 +244,7 @@ class _WordFrequencyCard extends StatelessWidget {
             children: frequencies.take(10).map((freq) {
               return Chip(
                 label: Text('${freq.word} (${freq.count})'),
-                backgroundColor: AppColors.accent.withOpacity(0.3),
+                backgroundColor: AppColors.accent.withValues(alpha: 0.3),
               );
             }).toList(),
           ),
