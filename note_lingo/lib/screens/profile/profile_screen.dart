@@ -259,7 +259,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final notes = context.watch<NotesProvider>();
-    final lang = context.watch<LanguageProvider>();
     final user = auth.currentUser;
 
     final body = SingleChildScrollView(
@@ -282,7 +281,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: _primary.withOpacity(0.30),
+                  color: _primary.withValues(alpha: 0.30),
                   blurRadius: 18,
                   offset: const Offset(0, 6),
                 ),
@@ -314,7 +313,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 4),
           Text(
             user?.email ?? '',
-            style: TextStyle(fontSize: 14, color: _textGrey.withOpacity(0.85)),
+            style: TextStyle(
+              fontSize: 14,
+              color: _textGrey.withValues(alpha: 0.85),
+            ),
           ),
           const SizedBox(height: 28),
 
@@ -342,11 +344,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 28),
 
-          // ── Language ───────────────────────────────────────
-          _Section(title: 'Recording Language'),
-          _LanguageSelector(lang: lang),
-          const SizedBox(height: 20),
-
           // ── Account ─────────────────────────────────────────
           _Section(title: 'Account'),
           _Tile(
@@ -366,7 +363,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               value: _notificationsEnabled,
               onChanged: _setNotificationsPreference,
               activeColor: _primary,
-              activeTrackColor: _primary.withOpacity(0.28),
+              activeTrackColor: _primary.withValues(alpha: 0.28),
             ),
           ),
           const SizedBox(height: 20),
@@ -380,7 +377,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               '1.0.0',
               style: TextStyle(
                 fontSize: 13,
-                color: _textGrey.withOpacity(0.85),
+                color: _textGrey.withValues(alpha: 0.85),
               ),
             ),
           ),
@@ -410,9 +407,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 15),
               decoration: BoxDecoration(
-                color: _cardBg.withOpacity(0.72),
+                color: _cardBg.withValues(alpha: 0.72),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: _error.withOpacity(0.50)),
+                border: Border.all(color: _error.withValues(alpha: 0.50)),
               ),
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -504,12 +501,12 @@ class _StatCard extends StatelessWidget {
     child: Container(
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
-        color: _cardBg.withOpacity(0.72),
+        color: _cardBg.withValues(alpha: 0.72),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: _border),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF4A7CF5).withOpacity(0.07),
+            color: const Color(0xFF4A7CF5).withValues(alpha: 0.07),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -529,7 +526,10 @@ class _StatCard extends StatelessWidget {
           ),
           Text(
             label,
-            style: TextStyle(fontSize: 11, color: _textGrey.withOpacity(0.80)),
+            style: TextStyle(
+              fontSize: 11,
+              color: _textGrey.withValues(alpha: 0.80),
+            ),
           ),
         ],
       ),
@@ -579,12 +579,12 @@ class _Tile extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     margin: const EdgeInsets.only(bottom: 8),
     decoration: BoxDecoration(
-      color: _cardBg.withOpacity(0.72),
+      color: _cardBg.withValues(alpha: 0.72),
       borderRadius: BorderRadius.circular(14),
       border: Border.all(color: _border),
       boxShadow: [
         BoxShadow(
-          color: const Color(0xFF4A7CF5).withOpacity(0.05),
+          color: const Color(0xFF4A7CF5).withValues(alpha: 0.05),
           blurRadius: 8,
           offset: const Offset(0, 3),
         ),
@@ -597,7 +597,7 @@ class _Tile extends StatelessWidget {
         width: 34,
         height: 34,
         decoration: BoxDecoration(
-          color: _primary.withOpacity(0.10),
+          color: _primary.withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(icon, color: _primary, size: 17),
@@ -626,27 +626,23 @@ class _Tile extends StatelessWidget {
 }
 
 // ── Language Selector ──────────────────────────────────────────────
-
+// ignore: unused_element
 class _LanguageSelector extends StatelessWidget {
   final LanguageProvider lang;
   const _LanguageSelector({required this.lang});
 
   @override
   Widget build(BuildContext context) {
-    const items = [
-      ('en', 'English'),
-      ('si', 'Sinhala'),
-      ('ta', 'Tamil'),
-    ];
+    const items = [('en', 'English'), ('si', 'Sinhala'), ('ta', 'Tamil')];
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
       decoration: BoxDecoration(
-        color: _cardBg.withOpacity(0.72),
+        color: _cardBg.withValues(alpha: 0.72),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: _border),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF4A7CF5).withOpacity(0.07),
+            color: const Color(0xFF4A7CF5).withValues(alpha: 0.07),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -660,7 +656,9 @@ class _LanguageSelector extends StatelessWidget {
             onTap: () {
               if (code != 'en') {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('$name language will be available soon.')),
+                  SnackBar(
+                    content: Text('$name language will be available soon.'),
+                  ),
                 );
                 return;
               }
@@ -683,7 +681,7 @@ class _LanguageSelector extends StatelessWidget {
                 boxShadow: sel
                     ? [
                         BoxShadow(
-                          color: _primary.withOpacity(0.25),
+                          color: _primary.withValues(alpha: 0.25),
                           blurRadius: 8,
                           offset: const Offset(0, 3),
                         ),
@@ -738,7 +736,7 @@ class _CircleBack extends StatelessWidget {
       width: 40,
       height: 40,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.70),
+        color: Colors.white.withValues(alpha: 0.70),
         shape: BoxShape.circle,
         border: Border.all(color: _border, width: 1.2),
       ),
