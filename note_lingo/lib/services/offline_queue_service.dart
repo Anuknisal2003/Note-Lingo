@@ -1,6 +1,8 @@
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 import '../models/note_model.dart';
+import 'retry_backoff_service.dart';
 
 class OfflineQueueItem {
   final String id;
@@ -13,6 +15,9 @@ class OfflineQueueItem {
   final DateTime createdAt;
   final int retries;
   final bool isProcessing;
+  final DateTime? lastRetryTime;
+  final String denoiseMethod;
+  final double denoiseStrength;
 
   OfflineQueueItem({
     required this.id,
@@ -25,7 +30,20 @@ class OfflineQueueItem {
     required this.createdAt,
     this.retries = 0,
     this.isProcessing = false,
+    this.lastRetryTime,
+    this.denoiseMethod = 'auto',
+    this.denoiseStrength = 1.0,
   });
+
+  /// Check if this item is ready to retry based on backoff policy.
+  bool isReadyToRetry() {
+    return RetryBackoffService.isReadyToRetry(retries, lastRetryTime);
+  }
+
+  /// Get remaining backoff delay in seconds.
+  int getRetryDelaySeconds() {
+    return RetryBackoffService.getBackoffDelay(retries, lastRetryTime);
+  }
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -38,6 +56,9 @@ class OfflineQueueItem {
     'createdAt': createdAt.toIso8601String(),
     'retries': retries,
     'isProcessing': isProcessing,
+    'lastRetryTime': lastRetryTime?.toIso8601String(),
+    'denoiseMethod': denoiseMethod,
+    'denoiseStrength': denoiseStrength,
   };
 
   factory OfflineQueueItem.fromJson(Map<String, dynamic> json) =>
@@ -57,6 +78,11 @@ class OfflineQueueItem {
         ),
         retries: json['retries'] ?? 0,
         isProcessing: json['isProcessing'] ?? false,
+        lastRetryTime: json['lastRetryTime'] != null
+            ? DateTime.parse(json['lastRetryTime'])
+            : null,
+        denoiseMethod: json['denoiseMethod'] ?? 'auto',
+        denoiseStrength: (json['denoiseStrength'] ?? 1.0).toDouble(),
       );
 }
 
@@ -65,49 +91,115 @@ class OfflineQueueService {
   factory OfflineQueueService() => _instance;
   OfflineQueueService._internal();
 
-  static const String _queueKey = 'offline_queue_items';
   static const int _maxRetries = 3;
 
-  Future<SharedPreferences> _getPrefs() => SharedPreferences.getInstance();
+  Future<File> _queueFile() async {
+    final dir = await getApplicationDocumentsDirectory();
+    return File('${dir.path}/offline_queue.json');
+  }
 
   /// Add item to offline queue
   Future<void> addToQueue(OfflineQueueItem item) async {
-    final prefs = await _getPrefs();
+    final file = await _queueFile();
     final queue = await getQueue();
     queue.add(item);
-
-    final jsonList = queue.map((i) => jsonEncode(i.toJson())).toList();
-    await prefs.setStringList(_queueKey, jsonList);
+    final jsonList = queue.map((i) => i.toJson()).toList();
+    final tmp = File('${file.path}.tmp');
+    await tmp.writeAsString(jsonEncode(jsonList));
+    await tmp.rename(file.path);
   }
 
   /// Get all queued items
   Future<List<OfflineQueueItem>> getQueue() async {
-    final prefs = await _getPrefs();
-    final jsonList = prefs.getStringList(_queueKey) ?? [];
-
-    return jsonList
-        .map((json) => OfflineQueueItem.fromJson(jsonDecode(json)))
-        .toList();
+    try {
+      final file = await _queueFile();
+      if (!await file.exists()) return [];
+      final s = await file.readAsString();
+      if (s.trim().isEmpty) return [];
+      final jsonList = jsonDecode(s) as List;
+      return jsonList
+          .map((j) => OfflineQueueItem.fromJson(Map<String, dynamic>.from(j)))
+          .toList();
+    } catch (_) {
+      return [];
+    }
   }
 
-  /// Get pending items (not yet processed)
+  /// Get pending items (not yet processed and ready to retry)
   Future<List<OfflineQueueItem>> getPendingItems() async {
     final queue = await getQueue();
     return queue
-        .where((item) => item.transcript == null && item.retries < _maxRetries)
+        .where(
+          (item) =>
+              item.transcript == null &&
+              item.retries < _maxRetries &&
+              item.isReadyToRetry(),
+        )
         .toList();
   }
 
-  /// Update queue item
-  Future<void> updateItem(OfflineQueueItem item) async {
-    final prefs = await _getPrefs();
-    var queue = await getQueue();
+  /// Get items not ready yet (backoff in effect)
+  Future<List<OfflineQueueItem>> getBackoffItems() async {
+    final queue = await getQueue();
+    return queue
+        .where(
+          (item) =>
+              item.transcript == null &&
+              item.retries < _maxRetries &&
+              !item.isReadyToRetry(),
+        )
+        .toList();
+  }
 
+  /// Batch sync: process multiple items and update all atomically.
+  /// Returns map of item IDs to success (true) or failure (false).
+  Future<Map<String, bool>> batchProcessItems(
+    List<OfflineQueueItem> items,
+    Future<(String transcript, String summary)> Function(OfflineQueueItem)
+    processItem,
+  ) async {
+    final results = <String, bool>{};
+    // final _queue = await getQueue();
+
+    for (final item in items) {
+      try {
+        await processItem(item);
+        await removeFromQueue(item.id);
+        results[item.id] = true;
+      } catch (e) {
+        // Mark as failed; update lastRetryTime for backoff
+        var updated = OfflineQueueItem(
+          id: item.id,
+          audioPath: item.audioPath,
+          transcript: item.transcript,
+          summary: item.summary,
+          category: item.category,
+          language: item.language,
+          isFavorite: item.isFavorite,
+          createdAt: item.createdAt,
+          retries: item.retries + 1,
+          isProcessing: false,
+          lastRetryTime: DateTime.now(),
+        );
+        await updateItem(updated);
+        results[item.id] = false;
+      }
+    }
+
+    return results;
+  }
+
+  /// Update _queue item
+  Future<void> updateItem(OfflineQueueItem item) async {
+    final file = await _queueFile();
+    var queue = await getQueue();
     final index = queue.indexWhere((i) => i.id == item.id);
     if (index >= 0) {
       queue[index] = item;
-      final jsonList = queue.map((i) => jsonEncode(i.toJson())).toList();
-      await prefs.setStringList(_queueKey, jsonList);
+      final jsonList = queue.map((i) => i.toJson()).toList();
+      final tmp = File('${file.path}.tmp');
+      await tmp.writeAsString(jsonEncode(jsonList));
+      await tmp.rename(file.path);
     }
   }
 
@@ -119,7 +211,6 @@ class OfflineQueueService {
   }) async {
     final queue = await getQueue();
     final itemIndex = queue.indexWhere((i) => i.id == itemId);
-
     if (itemIndex >= 0) {
       var item = queue[itemIndex];
       item = OfflineQueueItem(
@@ -138,7 +229,7 @@ class OfflineQueueService {
     }
   }
 
-  /// Increment retry count
+  /// Increment retry count (called when retry fails; updates lastRetryTime).
   Future<void> incrementRetry(String itemId) async {
     final queue = await getQueue();
     final itemIndex = queue.indexWhere((i) => i.id == itemId);
@@ -156,6 +247,7 @@ class OfflineQueueService {
         createdAt: item.createdAt,
         retries: item.retries + 1,
         isProcessing: false,
+        lastRetryTime: DateTime.now(),
       );
       await updateItem(item);
     }
@@ -163,24 +255,53 @@ class OfflineQueueService {
 
   /// Remove item from queue
   Future<void> removeFromQueue(String itemId) async {
-    final prefs = await _getPrefs();
+    final file = await _queueFile();
     var queue = await getQueue();
     queue.removeWhere((i) => i.id == itemId);
-
-    final jsonList = queue.map((i) => jsonEncode(i.toJson())).toList();
-    await prefs.setStringList(_queueKey, jsonList);
+    final jsonList = queue.map((i) => i.toJson()).toList();
+    final tmp = File('${file.path}.tmp');
+    await tmp.writeAsString(jsonEncode(jsonList));
+    await tmp.rename(file.path);
   }
 
   /// Clear entire queue
   Future<void> clearQueue() async {
-    final prefs = await _getPrefs();
-    await prefs.remove(_queueKey);
+    try {
+      final file = await _queueFile();
+      if (await file.exists()) await file.delete();
+    } catch (_) {}
   }
 
-  /// Get queue count
+  /// Get queue count — only items that still have sync attempts remaining
   Future<int> getQueueCount() async {
     final queue = await getQueue();
-    return queue.length;
+    return queue.where((item) => item.transcript == null).length;
+  }
+
+  /// Reset a failed item so it can be retried again
+  Future<void> resetRetries(String itemId) async {
+    final queue = await getQueue();
+    final index = queue.indexWhere((i) => i.id == itemId);
+    if (index >= 0) {
+      final item = queue[index];
+      await updateItem(
+        OfflineQueueItem(
+          id: item.id,
+          audioPath: item.audioPath,
+          transcript: item.transcript,
+          summary: item.summary,
+          category: item.category,
+          language: item.language,
+          isFavorite: item.isFavorite,
+          createdAt: item.createdAt,
+          retries: 0,
+          isProcessing: false,
+          lastRetryTime: null,
+          denoiseMethod: item.denoiseMethod,
+          denoiseStrength: item.denoiseStrength,
+        ),
+      );
+    }
   }
 
   /// Get failed items (exceeded max retries)
