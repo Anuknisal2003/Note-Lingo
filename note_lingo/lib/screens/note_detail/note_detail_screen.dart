@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../models/note_model.dart';
 import '../../providers/notes_provider.dart';
 import '../export/export_screen.dart';
+import '../collaboration/share_note_dialog.dart';
 
 const _bgTop = Color(0xFF6AABF8);
 const _bgMid = Color(0xFF9AC8FB);
@@ -43,6 +44,15 @@ class _NoteDetailScreenState extends State<NoteDetailScreen>
   }
 
   @override
+  void didUpdateWidget(covariant NoteDetailScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.note.id != widget.note.id ||
+        oldWidget.note.updatedAt != widget.note.updatedAt) {
+      _syncLocalNote(widget.note, updateControllers: !_editing);
+    }
+  }
+
+  @override
   void dispose() {
     _tabCtrl.dispose();
     _titleCtrl.dispose();
@@ -50,28 +60,71 @@ class _NoteDetailScreenState extends State<NoteDetailScreen>
     super.dispose();
   }
 
-  void _toggleFavorite() async {
-    final provider = context.read<NotesProvider>();
-    await provider.toggleFavorite(_note.id);
-    setState(() => _note = _note.copyWith(isFavorite: !_note.isFavorite));
+  void _syncLocalNote(NoteModel note, {bool updateControllers = false}) {
+    _note = note;
+    if (updateControllers) {
+      if (_titleCtrl.text != note.title) {
+        _titleCtrl.value = TextEditingValue(
+          text: note.title,
+          selection: TextSelection.collapsed(offset: note.title.length),
+        );
+      }
+      if (_transcriptCtrl.text != note.transcript) {
+        _transcriptCtrl.value = TextEditingValue(
+          text: note.transcript,
+          selection: TextSelection.collapsed(offset: note.transcript.length),
+        );
+      }
+    }
   }
 
-  void _saveEdits() async {
+  int _countWords(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return 0;
+    return trimmed.split(RegExp(r'\s+')).length;
+  }
+
+  void _toggleFavorite(NoteModel note) async {
     final provider = context.read<NotesProvider>();
-    final updated = _note.copyWith(
+    await provider.toggleFavorite(note.id);
+    setState(
+      () => _syncLocalNote(
+        note.copyWith(isFavorite: !note.isFavorite),
+        updateControllers: false,
+      ),
+    );
+  }
+
+  void _saveEdits(NoteModel note) async {
+    final provider = context.read<NotesProvider>();
+    final transcript = _transcriptCtrl.text.trim();
+    final updated = note.copyWith(
       title: _titleCtrl.text.trim(),
-      transcription: _transcriptCtrl.text.trim(),
+      transcription: transcript,
+      wordCount: _countWords(transcript),
       updatedAt: DateTime.now(),
     );
-    await provider.updateNote(updated);
-    setState(() {
-      _note = updated;
-      _editing = false;
-    });
-    if (mounted) {
+    try {
+      await provider.updateNote(updated);
+      if (!mounted) return;
+      setState(() {
+        _syncLocalNote(updated, updateControllers: true);
+        _editing = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Note updated', style: TextStyle(color: _textDark)),
+          backgroundColor: _cardBg,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Failed to update note: $e',
+            style: const TextStyle(color: _textDark),
+          ),
           backgroundColor: _cardBg,
         ),
       );
@@ -109,27 +162,80 @@ class _NoteDetailScreenState extends State<NoteDetailScreen>
 
   @override
   Widget build(BuildContext context) {
+    final liveNote =
+        context.select<NotesProvider, NoteModel?>((provider) {
+          for (final note in provider.notes) {
+            if (note.id == _note.id) return note;
+          }
+          return null;
+        }) ??
+        _note;
+
+    if (!_editing && liveNote.updatedAt != _note.updatedAt) {
+      _syncLocalNote(liveNote, updateControllers: true);
+    }
+
     return Scaffold(
       backgroundColor: _bgBot,
       body: NestedScrollView(
-        headerSliverBuilder: (_, innerBoxIsScrolled) => [_buildAppBar()],
-        body: TabBarView(
-          controller: _tabCtrl,
+        headerSliverBuilder: (_, innerBoxIsScrolled) => [
+          _buildAppBar(liveNote),
+        ],
+        body: Column(
           children: [
-            _SummaryTab(note: _note),
-            _TranscriptTab(
-              note: _note,
-              editing: _editing,
-              ctrl: _transcriptCtrl,
+            if (_editing)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                child: TextField(
+                  controller: _titleCtrl,
+                  autofocus: true,
+                  textInputAction: TextInputAction.next,
+                  style: const TextStyle(
+                    color: _textDark,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  decoration: InputDecoration(
+                    labelText: 'Title',
+                    labelStyle: const TextStyle(color: _textGrey),
+                    filled: true,
+                    fillColor: _cardBg,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: _border),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: _border),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: _primary, width: 1.5),
+                    ),
+                  ),
+                ),
+              ),
+            Expanded(
+              child: TabBarView(
+                controller: _tabCtrl,
+                children: [
+                  _SummaryTab(note: liveNote),
+                  _TranscriptTab(
+                    note: liveNote,
+                    editing: _editing,
+                    ctrl: _transcriptCtrl,
+                  ),
+                  _DetailsTab(note: liveNote),
+                ],
+              ),
             ),
-            _DetailsTab(note: _note),
           ],
         ),
       ),
     );
   }
 
-  SliverAppBar _buildAppBar() {
+  SliverAppBar _buildAppBar(NoteModel note) {
     return SliverAppBar(
       expandedHeight: 160,
       pinned: true,
@@ -141,15 +247,15 @@ class _NoteDetailScreenState extends State<NoteDetailScreen>
       actions: [
         IconButton(
           icon: Icon(
-            _note.isFavorite ? Icons.star_rounded : Icons.star_outline_rounded,
-            color: _note.isFavorite ? const Color(0xFFFFD700) : _textGrey,
+            note.isFavorite ? Icons.star_rounded : Icons.star_outline_rounded,
+            color: note.isFavorite ? const Color(0xFFFFD700) : _textGrey,
           ),
-          onPressed: _toggleFavorite,
+          onPressed: () => _toggleFavorite(note),
         ),
         if (_editing)
           IconButton(
             icon: const Icon(Icons.check_circle, color: _primary),
-            onPressed: _saveEdits,
+            onPressed: () => _saveEdits(note),
           )
         else
           IconButton(
@@ -164,11 +270,22 @@ class _NoteDetailScreenState extends State<NoteDetailScreen>
             if (v == 'export') {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => ExportScreen(note: _note)),
+                MaterialPageRoute(builder: (_) => ExportScreen(note: note)),
+              );
+            }
+            if (v == 'share') {
+              showDialog(
+                context: context,
+                builder: (_) =>
+                    ShareNoteDialog(noteId: note.id, noteTitle: note.title),
               );
             }
           },
           itemBuilder: (_) => [
+            const PopupMenuItem(
+              value: 'share',
+              child: Text('Share Note', style: TextStyle(color: _textDark)),
+            ),
             const PopupMenuItem(
               value: 'export',
               child: Text('Export Note', style: TextStyle(color: _textDark)),
@@ -183,27 +300,34 @@ class _NoteDetailScreenState extends State<NoteDetailScreen>
           ],
         ),
       ],
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(48),
+        child: Container(
+          color: _bgBot,
+          child: TabBar(
+            controller: _tabCtrl,
+            labelColor: _primary,
+            unselectedLabelColor: _textGrey,
+            indicatorColor: _primary,
+            tabs: const [
+              Tab(text: 'Summary'),
+              Tab(text: 'Transcript'),
+              Tab(text: 'Details'),
+            ],
+          ),
+        ),
+      ),
       flexibleSpace: FlexibleSpaceBar(
         titlePadding: const EdgeInsets.fromLTRB(20, 0, 20, 56),
-        title: _editing
-            ? TextField(
-                controller: _titleCtrl,
-                style: const TextStyle(
-                  color: _textDark,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                ),
-                decoration: const InputDecoration(border: InputBorder.none),
-              )
-            : Text(
-                _note.title,
-                style: const TextStyle(
-                  color: _textDark,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                ),
-                maxLines: 2,
-              ),
+        title: Text(
+          note.title,
+          style: const TextStyle(
+            color: _textDark,
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+          ),
+          maxLines: 2,
+        ),
         background: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
@@ -211,23 +335,6 @@ class _NoteDetailScreenState extends State<NoteDetailScreen>
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
-          ),
-        ),
-      ),
-      bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(kTextTabBarHeight),
-        child: Container(
-          color: _cardBg,
-          child: TabBar(
-            controller: _tabCtrl,
-            indicatorColor: _primary,
-            labelColor: _primary,
-            unselectedLabelColor: _textGrey,
-            tabs: const [
-              Tab(text: 'Summary'),
-              Tab(text: 'Transcript'),
-              Tab(text: 'Details'),
-            ],
           ),
         ),
       ),
