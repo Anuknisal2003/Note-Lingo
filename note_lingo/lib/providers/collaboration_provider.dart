@@ -13,7 +13,7 @@ class CollaborationProvider extends ChangeNotifier {
 
   List<NoteModel> _sharedNotes = [];
   List<CommentModel> _comments = [];
-  List<String> _onlineUsers = [];
+  final List<String> _onlineUsers = [];
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -92,7 +92,8 @@ class CollaborationProvider extends ChangeNotifier {
         }
       }
 
-      if (currentComment != null && currentComment.likedBy.contains(currentUserId)) {
+      if (currentComment != null &&
+          currentComment.likedBy.contains(currentUserId)) {
         await _collaboration.unlikeComment(noteId, commentId);
       } else {
         await _collaboration.likeComment(noteId, commentId);
