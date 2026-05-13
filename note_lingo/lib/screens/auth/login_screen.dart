@@ -116,8 +116,8 @@ class _LoginScreenState extends State<LoginScreen>
   void _goHome() {
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
-        pageBuilder: (_, __, ___) => const HomeScreen(),
-        transitionsBuilder: (_, anim, __, child) =>
+        pageBuilder: (_, _, _) => const HomeScreen(),
+        transitionsBuilder: (_, anim, _, child) =>
             FadeTransition(opacity: anim, child: child),
         transitionDuration: const Duration(milliseconds: 400),
       ),
@@ -146,7 +146,7 @@ class _LoginScreenState extends State<LoginScreen>
           // ── Floating decorative orbs ────────────────────────────
           AnimatedBuilder(
             animation: _orbCtrl,
-            builder: (_, __) {
+            builder: (_, _) {
               final t = _orbCtrl.value;
               return Stack(
                 children: [
@@ -155,7 +155,7 @@ class _LoginScreenState extends State<LoginScreen>
                     right: -50,
                     child: _Orb(
                       size: 210,
-                      color: const Color(0xFF5AA0F8).withOpacity(0.28),
+                      color: const Color(0xFF5AA0F8).withValues(alpha: 0.28),
                     ),
                   ),
                   Positioned(
@@ -163,13 +163,13 @@ class _LoginScreenState extends State<LoginScreen>
                     left: -45,
                     child: _Orb(
                       size: 150,
-                      color: const Color(0xFF88BFFB).withOpacity(0.22),
+                      color: const Color(0xFF88BFFB).withValues(alpha: 0.22),
                     ),
                   ),
                   Positioned(
                     bottom: size.height * 0.10 + 10 * math.sin(t * math.pi),
                     right: 10,
-                    child: _Orb(size: 80, color: _deep.withOpacity(0.10)),
+                    child: _Orb(size: 80, color: _deep.withValues(alpha: 0.10)),
                   ),
                 ],
               );
@@ -204,7 +204,7 @@ class _LoginScreenState extends State<LoginScreen>
                               borderRadius: BorderRadius.circular(14),
                               boxShadow: [
                                 BoxShadow(
-                                  color: _primary.withOpacity(0.35),
+                                  color: _primary.withValues(alpha: 0.35),
                                   blurRadius: 16,
                                   offset: const Offset(0, 6),
                                 ),
@@ -271,15 +271,15 @@ class _LoginScreenState extends State<LoginScreen>
                       Container(
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.72),
+                          color: Colors.white.withValues(alpha: 0.72),
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(
-                            color: Colors.white.withOpacity(0.80),
+                            color: Colors.white.withValues(alpha: 0.80),
                             width: 1.5,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF4A7CF5).withOpacity(0.10),
+                              color: const Color(0xFF4A7CF5).withValues(alpha: 0.10),
                               blurRadius: 30,
                               offset: const Offset(0, 10),
                             ),
@@ -381,7 +381,7 @@ class _LoginScreenState extends State<LoginScreen>
                         children: [
                           Expanded(
                             child: Divider(
-                              color: _textGrey.withOpacity(0.30),
+                              color: _textGrey.withValues(alpha: 0.30),
                               thickness: 1,
                             ),
                           ),
@@ -391,13 +391,13 @@ class _LoginScreenState extends State<LoginScreen>
                               'or',
                               style: TextStyle(
                                 fontSize: 13,
-                                color: _textGrey.withOpacity(0.70),
+                                color: _textGrey.withValues(alpha: 0.70),
                               ),
                             ),
                           ),
                           Expanded(
                             child: Divider(
-                              color: _textGrey.withOpacity(0.30),
+                              color: _textGrey.withValues(alpha: 0.30),
                               thickness: 1,
                             ),
                           ),
@@ -423,7 +423,7 @@ class _LoginScreenState extends State<LoginScreen>
                               "Don't have an account? ",
                               style: TextStyle(
                                 fontSize: 14,
-                                color: _textGrey.withOpacity(0.85),
+                                color: _textGrey.withValues(alpha: 0.85),
                               ),
                             ),
                             GestureDetector(
@@ -505,8 +505,8 @@ class _InputField extends StatelessWidget {
     style: const TextStyle(fontSize: 15, color: _textDark),
     decoration: InputDecoration(
       hintText: hint,
-      hintStyle: TextStyle(color: _textGrey.withOpacity(0.55), fontSize: 14),
-      prefixIcon: Icon(icon, size: 20, color: _primary.withOpacity(0.70)),
+      hintStyle: TextStyle(color: _textGrey.withValues(alpha: 0.55), fontSize: 14),
+      prefixIcon: Icon(icon, size: 20, color: _primary.withValues(alpha: 0.70)),
       suffixIcon: suffix,
       filled: true,
       fillColor: _inputBg,
@@ -565,7 +565,7 @@ class _GradientButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: _primary.withOpacity(0.40),
+              color: _primary.withValues(alpha: 0.40),
               blurRadius: 20,
               offset: const Offset(0, 8),
             ),
@@ -587,7 +587,7 @@ class _GradientButton extends StatelessWidget {
                   ),
                   gradient: LinearGradient(
                     colors: [
-                      Colors.white.withOpacity(0.18),
+                      Colors.white.withValues(alpha: 0.18),
                       Colors.transparent,
                     ],
                     begin: Alignment.topCenter,
@@ -639,12 +639,12 @@ class _SocialButton extends StatelessWidget {
       width: double.infinity,
       height: 54,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.72),
+        color: Colors.white.withValues(alpha: 0.72),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: _border, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF4A7CF5).withOpacity(0.07),
+            color: const Color(0xFF4A7CF5).withValues(alpha: 0.07),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -692,7 +692,7 @@ class _Orb extends StatelessWidget {
     height: size,
     decoration: BoxDecoration(
       shape: BoxShape.circle,
-      gradient: RadialGradient(colors: [color, color.withOpacity(0)]),
+      gradient: RadialGradient(colors: [color, color.withValues(alpha: 0)]),
     ),
   );
 }
