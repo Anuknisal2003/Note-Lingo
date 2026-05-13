@@ -90,8 +90,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
-        pageBuilder: (_, __, ___) => const LoginScreen(),
-        transitionsBuilder: (_, a, __, c) =>
+        pageBuilder: (_, _, _) => const LoginScreen(),
+        transitionsBuilder: (_, a, _, c) =>
             FadeTransition(opacity: a, child: c),
         transitionDuration: const Duration(milliseconds: 400),
       ),
@@ -200,24 +200,24 @@ class _PageView extends StatelessWidget {
           // ── Decorative orbs in background ─────────────────────
           AnimatedBuilder(
             animation: orbCtrl,
-            builder: (_, __) {
+            builder: (_, _) {
               final t = orbCtrl.value;
               return Stack(
                 children: [
                   Positioned(
                     top: sz.height * 0.10 + 18 * math.sin(t * math.pi),
                     right: -40,
-                    child: _Orb(size: 160, color: data.topA.withOpacity(0.28)),
+                    child: _Orb(size: 160, color: data.topA.withValues(alpha: 0.28)),
                   ),
                   Positioned(
                     top: sz.height * 0.26 - 12 * math.sin(t * math.pi),
                     left: -50,
-                    child: _Orb(size: 120, color: data.topB.withOpacity(0.22)),
+                    child: _Orb(size: 120, color: data.topB.withValues(alpha: 0.22)),
                   ),
                   Positioned(
                     bottom: sz.height * 0.28 + 10 * math.sin(t * math.pi),
                     right: 20,
-                    child: _Orb(size: 80, color: _c1.withOpacity(0.12)),
+                    child: _Orb(size: 80, color: _c1.withValues(alpha: 0.12)),
                   ),
                 ],
               );
@@ -355,9 +355,9 @@ class _TagChip extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
     decoration: BoxDecoration(
-      color: color.withOpacity(0.18),
+      color: color.withValues(alpha: 0.18),
       borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: color.withOpacity(0.35), width: 1),
+      border: Border.all(color: color.withValues(alpha: 0.35), width: 1),
     ),
     child: Row(
       mainAxisSize: MainAxisSize.min,
@@ -473,7 +473,7 @@ class _ArrowBtn extends StatelessWidget {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.45),
+            color: color.withValues(alpha: 0.45),
             blurRadius: 22,
             offset: const Offset(0, 8),
           ),
@@ -509,7 +509,7 @@ class _GetStartedBtn extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.45),
+            color: color.withValues(alpha: 0.45),
             blurRadius: 24,
             offset: const Offset(0, 10),
           ),
@@ -531,8 +531,8 @@ class _GetStartedBtn extends StatelessWidget {
                 ),
                 gradient: LinearGradient(
                   colors: [
-                    Colors.white.withOpacity(0.18),
-                    Colors.white.withOpacity(0.0),
+                    Colors.white.withValues(alpha: 0.18),
+                    Colors.white.withValues(alpha: 0.0),
                   ],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
@@ -574,7 +574,7 @@ class _Orb extends StatelessWidget {
     height: size,
     decoration: BoxDecoration(
       shape: BoxShape.circle,
-      gradient: RadialGradient(colors: [color, color.withOpacity(0)]),
+      gradient: RadialGradient(colors: [color, color.withValues(alpha: 0)]),
     ),
   );
 }
