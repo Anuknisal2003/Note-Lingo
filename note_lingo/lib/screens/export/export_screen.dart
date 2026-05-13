@@ -69,7 +69,10 @@ class _ExportScreenState extends State<ExportScreen> {
   ];
 
   Future<void> _export(String formatId) async {
-    if (!(_includeSummary || _includeTranscript || _includeKeywords || _includeMeta)) {
+    if (!(_includeSummary ||
+        _includeTranscript ||
+        _includeKeywords ||
+        _includeMeta)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Select at least one section to export.')),
       );
@@ -163,14 +166,14 @@ class _ExportScreenState extends State<ExportScreen> {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: _cardBg.withOpacity(0.80),
+                            color: _cardBg.withValues(alpha: 0.80),
                             borderRadius: BorderRadius.circular(18),
                             border: Border.all(color: _border),
                             boxShadow: [
                               BoxShadow(
                                 color: const Color(
                                   0xFF4A7CF5,
-                                ).withOpacity(0.08),
+                                ).withValues(alpha: 0.08),
                                 blurRadius: 16,
                                 offset: const Offset(0, 6),
                               ),
@@ -190,7 +193,7 @@ class _ExportScreenState extends State<ExportScreen> {
                                   borderRadius: BorderRadius.circular(13),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: _primary.withOpacity(0.28),
+                                      color: _primary.withValues(alpha: 0.28),
                                       blurRadius: 10,
                                       offset: const Offset(0, 4),
                                     ),
@@ -222,7 +225,9 @@ class _ExportScreenState extends State<ExportScreen> {
                                       '${widget.note.wordCount} words · ${widget.note.category.label}',
                                       style: TextStyle(
                                         fontSize: 12,
-                                        color: _textGrey.withOpacity(0.85),
+                                        color: _textGrey.withValues(
+                                          alpha: 0.85,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -324,12 +329,14 @@ class _ToggleTile extends StatelessWidget {
     margin: const EdgeInsets.only(bottom: 8),
     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
     decoration: BoxDecoration(
-      color: _cardBg.withOpacity(0.72),
+      color: _cardBg.withValues(alpha: 0.72),
       borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: value ? _primary.withOpacity(0.40) : _border),
+      border: Border.all(
+        color: value ? _primary.withValues(alpha: 0.40) : _border,
+      ),
       boxShadow: [
         BoxShadow(
-          color: const Color(0xFF4A7CF5).withOpacity(0.05),
+          color: const Color(0xFF4A7CF5).withValues(alpha: 0.05),
           blurRadius: 8,
           offset: const Offset(0, 3),
         ),
@@ -349,8 +356,8 @@ class _ToggleTile extends StatelessWidget {
         Switch(
           value: value,
           onChanged: onChanged,
-          activeColor: _primary,
-          activeTrackColor: _primary.withOpacity(0.30),
+          activeThumbColor: _primary,
+          activeTrackColor: _primary.withValues(alpha: 0.30),
         ),
       ],
     ),
@@ -394,12 +401,12 @@ class _FormatCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: _cardBg.withOpacity(0.80),
+          color: _cardBg.withValues(alpha: 0.80),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: _border),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF4A7CF5).withOpacity(0.08),
+              color: const Color(0xFF4A7CF5).withValues(alpha: 0.08),
               blurRadius: 14,
               offset: const Offset(0, 5),
             ),
@@ -415,7 +422,7 @@ class _FormatCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
-                    color: format.glow.withOpacity(0.28),
+                    color: format.glow.withValues(alpha: 0.28),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -451,7 +458,7 @@ class _FormatCard extends StatelessWidget {
                     format.desc,
                     style: TextStyle(
                       fontSize: 12,
-                      color: _textGrey.withOpacity(0.85),
+                      color: _textGrey.withValues(alpha: 0.85),
                     ),
                   ),
                 ],
@@ -482,7 +489,7 @@ class _CircleBack extends StatelessWidget {
       width: 40,
       height: 40,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.70),
+        color: Colors.white.withValues(alpha: 0.70),
         shape: BoxShape.circle,
         border: Border.all(color: _border, width: 1.2),
       ),
