@@ -10,7 +10,11 @@ class CommentsView extends StatefulWidget {
   final String noteId;
   final String noteTitle;
 
-  const CommentsView({required this.noteId, required this.noteTitle});
+  const CommentsView({
+    super.key,
+    required this.noteId,
+    required this.noteTitle,
+  });
 
   @override
   State<CommentsView> createState() => _CommentsViewState();
@@ -50,10 +54,12 @@ class _CommentsViewState extends State<CommentsView> {
       _commentController.clear();
       setState(() => _replyingToCommentId = null);
 
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Comment posted')));
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -182,6 +188,7 @@ class CommentTile extends StatelessWidget {
   final VoidCallback onReply;
 
   const CommentTile({
+    super.key,
     required this.comment,
     required this.noteId,
     required this.onReply,
