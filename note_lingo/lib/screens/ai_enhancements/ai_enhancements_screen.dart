@@ -219,7 +219,7 @@ class _SpeakersCard extends StatelessWidget {
             children: speakers.map((speaker) {
               return Chip(
                 label: Text(speaker),
-                backgroundColor: AppColors.accent.withOpacity(0.3),
+                backgroundColor: AppColors.accent.withValues(alpha: 0.3),
                 avatar: const Icon(Icons.person, size: 18),
               );
             }).toList(),
@@ -275,7 +275,7 @@ class _QaCard extends StatelessWidget {
                   const SizedBox(height: 12),
                 ],
               );
-            }).toList(),
+            }),
         ],
       ),
     );
@@ -311,7 +311,7 @@ class _EntitiesCard extends StatelessWidget {
               final count = counts[entity] ?? 1;
               return Chip(
                 label: Text('$entity (${count}x)'),
-                backgroundColor: AppColors.accent.withOpacity(0.2),
+                backgroundColor: AppColors.accent.withValues(alpha: 0.2),
               );
             }).toList(),
           ),
