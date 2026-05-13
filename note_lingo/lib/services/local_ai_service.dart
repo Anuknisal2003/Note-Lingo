@@ -8,6 +8,20 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
+class TranscriptionResult {
+  final String text;
+  final String language;
+
+  const TranscriptionResult({required this.text, required this.language});
+
+  factory TranscriptionResult.fromJson(Map<String, dynamic> json) {
+    return TranscriptionResult(
+      text: (json['text'] ?? '').toString().trim(),
+      language: (json['language'] ?? 'en').toString().trim().toLowerCase(),
+    );
+  }
+}
+
 class SummaryResult {
   final String title;
   final String categoryHeading;
@@ -81,6 +95,24 @@ class LocalAiService {
   static const Duration _timeout = Duration(seconds: 60);
   String? _activeBaseUrl;
 
+  String? _normalizeLanguageHint(String? value) {
+    if (value == null) return null;
+    final raw = value.trim().toLowerCase();
+    if (raw.isEmpty || raw == 'auto' || raw == 'detect') return null;
+
+    const aliases = {
+      'english': 'en',
+      'en-us': 'en',
+      'en-gb': 'en',
+      'sinhala': 'si',
+      'sinhalese': 'si',
+      'tamil': 'ta',
+    };
+    final mapped = aliases[raw] ?? raw;
+    final isIso2 = RegExp(r'^[a-z]{2}$').hasMatch(mapped);
+    return isIso2 ? mapped : null;
+  }
+
   List<String> _candidateBaseUrls() {
     final urls = <String>[];
 
@@ -101,8 +133,8 @@ class LocalAiService {
     urls.addAll([
       'http://127.0.0.1:5000',
       'http://localhost:5000',
-      // Current machine LAN address from Flask startup logs.
-      'http://172.20.10.4:5000',
+      // Prefer explicit config via --dart-define or assets/.env instead
+      // of embedding a single hardcoded LAN IP here.
     ]);
 
     return urls.toSet().toList();
@@ -130,8 +162,20 @@ class LocalAiService {
     );
   }
 
+  /// Public helper: try to return a reachable base URL or null if none.
+  Future<String?> getBaseUrlOrNull() async {
+    try {
+      return await _resolveBaseUrl();
+    } catch (_) {
+      return null;
+    }
+  }
+
   // ── Check if Flask server is running ───────────────────
+  /// Always does a fresh health check — clears any cached URL first
+  /// so that a reconnected network gets a real re-probe of all candidates.
   Future<bool> isServerAvailable() async {
+    _activeBaseUrl = null; // invalidate stale cached URL
     try {
       await _resolveBaseUrl();
       return true;
@@ -141,20 +185,27 @@ class LocalAiService {
   }
 
   // ── Transcribe audio file ─────────────────────────────
-  Future<String> transcribe(File audioFile) async {
-    // Basic validation
+  Future<TranscriptionResult> transcribe(
+    File audioFile, {
+    bool enableDenoise = true,
+    String denoiseMethod = 'auto',
+    double denoiseStrength = 1.0,
+    String? languageHint,
+  }) async {
     if (!await audioFile.exists()) {
       throw Exception('Audio file not found: ${audioFile.path}');
     }
     final size = await audioFile.length();
     debugPrint(
-      '[LocalAiService] transcribe: file=${audioFile.path} size=$size',
+      '[LocalAiService] transcribe: file=${audioFile.path} size=$size denoise=$enableDenoise method=$denoiseMethod',
     );
     if (size < 1024) {
       throw Exception(
         'Audio file appears too small (${size} bytes), likely empty.',
       );
     }
+
+    final normalizedLanguageHint = _normalizeLanguageHint(languageHint);
 
     // Try local first
     try {
@@ -163,6 +214,15 @@ class LocalAiService {
       final req = http.MultipartRequest('POST', uri);
 
       req.files.add(await http.MultipartFile.fromPath('audio', audioFile.path));
+
+      // Add denoise parameters
+      req.fields['denoise'] = enableDenoise ? denoiseMethod : '0';
+      if (enableDenoise && denoiseStrength != 1.0) {
+        req.fields['denoise_strength'] = denoiseStrength.toString();
+      }
+      if (normalizedLanguageHint != null) {
+        req.fields['language'] = normalizedLanguageHint;
+      }
 
       final streamed = await req.send().timeout(_timeout);
       final body = await http.Response.fromStream(streamed);
@@ -173,11 +233,11 @@ class LocalAiService {
       }
 
       final data = jsonDecode(body.body) as Map<String, dynamic>;
-      final text = (data['text'] ?? '').toString().trim();
+      final transcription = TranscriptionResult.fromJson(data);
       debugPrint(
-        '[LocalAiService] local response: status=${body.statusCode} text_len=${text.length}',
+        '[LocalAiService] local response: status=${body.statusCode} text_len=${transcription.text.length} lang=${transcription.language}',
       );
-      return text;
+      return transcription;
     } catch (e) {
       // If OpenAI API key is present, try Whisper API as a fallback
       final openai = dotenv.env['OPENAI_API_KEY']?.trim() ?? '';
@@ -192,16 +252,23 @@ class LocalAiService {
             await http.MultipartFile.fromPath('file', audioFile.path),
           );
           req.fields['model'] = 'whisper-1';
+          if (normalizedLanguageHint != null) {
+            req.fields['language'] = normalizedLanguageHint;
+          }
 
           final streamed = await req.send().timeout(_timeout);
           final body = await http.Response.fromStream(streamed);
           final data = jsonDecode(body.body) as Map<String, dynamic>;
           final text = (data['text'] ?? '').toString().trim();
+          final language = (data['language'] ?? 'en')
+              .toString()
+              .trim()
+              .toLowerCase();
           debugPrint(
             '[LocalAiService] OpenAI response: status=${body.statusCode} text_len=${text.length}',
           );
           if (body.statusCode == 200) {
-            return text;
+            return TranscriptionResult(text: text, language: language);
           } else {
             final msg = _parseError(body.body);
             throw Exception(
