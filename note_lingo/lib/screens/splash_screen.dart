@@ -90,8 +90,8 @@ class _SplashScreenState extends State<SplashScreen>
   void _goTo(Widget screen) {
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
-        pageBuilder: (_, __, ___) => screen,
-        transitionsBuilder: (_, anim, __, child) =>
+        pageBuilder: (_, _, _) => screen,
+        transitionsBuilder: (_, anim, _, child) =>
             FadeTransition(opacity: anim, child: child),
         transitionDuration: const Duration(milliseconds: 500),
       ),
@@ -127,7 +127,7 @@ class _SplashScreenState extends State<SplashScreen>
           // ── Floating decorative orbs ───────────────────────────
           AnimatedBuilder(
             animation: _orbCtrl,
-            builder: (_, __) {
+            builder: (_, _) {
               final t = _orbCtrl.value;
               return Stack(
                 children: [
@@ -137,7 +137,7 @@ class _SplashScreenState extends State<SplashScreen>
                     right: -60,
                     child: _Orb(
                       size: 220,
-                      color: const Color(0xFF5AA0F8).withOpacity(0.30),
+                      color: const Color(0xFF5AA0F8).withValues(alpha: 0.30),
                     ),
                   ),
                   // Left mid orb
@@ -146,14 +146,14 @@ class _SplashScreenState extends State<SplashScreen>
                     left: -55,
                     child: _Orb(
                       size: 160,
-                      color: const Color(0xFF88BFFB).withOpacity(0.25),
+                      color: const Color(0xFF88BFFB).withValues(alpha: 0.25),
                     ),
                   ),
                   // Bottom-right small orb
                   Positioned(
                     bottom: size.height * 0.15 + 12 * math.sin(t * math.pi),
                     right: 20,
-                    child: _Orb(size: 90, color: _deep.withOpacity(0.12)),
+                    child: _Orb(size: 90, color: _deep.withValues(alpha: 0.12)),
                   ),
                   // Bottom-left tiny orb
                   Positioned(
@@ -161,7 +161,7 @@ class _SplashScreenState extends State<SplashScreen>
                     left: 30,
                     child: _Orb(
                       size: 60,
-                      color: const Color(0xFF4F8EF7).withOpacity(0.18),
+                      color: const Color(0xFF4F8EF7).withValues(alpha: 0.18),
                     ),
                   ),
                 ],
@@ -173,7 +173,7 @@ class _SplashScreenState extends State<SplashScreen>
           Center(
             child: AnimatedBuilder(
               animation: _ctrl,
-              builder: (_, __) => FadeTransition(
+              builder: (_, _) => FadeTransition(
                 opacity: _fade,
                 child: ScaleTransition(
                   scale: _scale,
@@ -183,7 +183,7 @@ class _SplashScreenState extends State<SplashScreen>
                       // ── App icon ────────────────────────────────
                       AnimatedBuilder(
                         animation: _glow,
-                        builder: (_, __) => Container(
+                        builder: (_, _) => Container(
                           width: 100,
                           height: 100,
                           decoration: BoxDecoration(
@@ -197,7 +197,7 @@ class _SplashScreenState extends State<SplashScreen>
                               BoxShadow(
                                 color: const Color(
                                   0xFF4A7CF5,
-                                ).withOpacity(0.55 * _glow.value),
+                                ).withValues(alpha: 0.55 * _glow.value),
                                 blurRadius: 48,
                                 spreadRadius: 6,
                                 offset: const Offset(0, 12),
@@ -255,7 +255,7 @@ class _SplashScreenState extends State<SplashScreen>
                       // ── Tagline with pill ────────────────────────
                       AnimatedBuilder(
                         animation: _glow,
-                        builder: (_, __) => Opacity(
+                        builder: (_, _) => Opacity(
                           opacity: _glow.value,
                           child: Container(
                             padding: const EdgeInsets.symmetric(
@@ -263,10 +263,10 @@ class _SplashScreenState extends State<SplashScreen>
                               vertical: 7,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.35),
+                              color: Colors.white.withValues(alpha: 0.35),
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
-                                color: Colors.white.withOpacity(0.55),
+                                color: Colors.white.withValues(alpha: 0.55),
                                 width: 1,
                               ),
                             ),
@@ -310,7 +310,7 @@ class _SplashScreenState extends State<SplashScreen>
             right: 0,
             child: AnimatedBuilder(
               animation: _glow,
-              builder: (_, __) => Opacity(
+              builder: (_, _) => Opacity(
                 opacity: _glow.value,
                 child: Center(
                   child: Column(
@@ -322,7 +322,7 @@ class _SplashScreenState extends State<SplashScreen>
                         children: List.generate(3, (i) {
                           return AnimatedBuilder(
                             animation: _orbCtrl,
-                            builder: (_, __) {
+                            builder: (_, _) {
                               final pulse = math.sin(
                                 _orbCtrl.value * math.pi * 2 + i * 1.0,
                               );
@@ -336,7 +336,7 @@ class _SplashScreenState extends State<SplashScreen>
                                   shape: BoxShape.circle,
                                   color: const Color(
                                     0xFF4F8EF7,
-                                  ).withOpacity(0.4 + 0.6 * ((pulse + 1) / 2)),
+                                  ).withValues(alpha: 0.4 + 0.6 * ((pulse + 1) / 2)),
                                 ),
                               );
                             },
@@ -348,7 +348,7 @@ class _SplashScreenState extends State<SplashScreen>
                         'Loading…',
                         style: TextStyle(
                           fontSize: 12,
-                          color: _textGrey.withOpacity(0.7),
+                          color: _textGrey.withValues(alpha: 0.7),
                           letterSpacing: 0.5,
                         ),
                       ),
@@ -376,7 +376,7 @@ class _Orb extends StatelessWidget {
     height: size,
     decoration: BoxDecoration(
       shape: BoxShape.circle,
-      gradient: RadialGradient(colors: [color, color.withOpacity(0)]),
+      gradient: RadialGradient(colors: [color, color.withValues(alpha: 0)]),
     ),
   );
 }
