@@ -12,7 +12,7 @@ class SmartFoldersScreen extends StatefulWidget {
 
 class _SmartFoldersScreenState extends State<SmartFoldersScreen> {
   final TextEditingController _folderNameController = TextEditingController();
-  List<String> _selectedTags = [];
+  final List<String> _selectedTags = [];
 
   void _showCreateFolderDialog() {
     showDialog(
