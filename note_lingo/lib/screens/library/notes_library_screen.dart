@@ -38,8 +38,9 @@ class _NotesLibraryScreenState extends State<NotesLibraryScreen> {
   List<NoteModel> _filtered(List<NoteModel> all) {
     var list = all.toList();
     if (_favOnly) list = list.where((n) => n.isFavorite).toList();
-    if (_filterCat != null)
+    if (_filterCat != null) {
       list = list.where((n) => n.category == _filterCat).toList();
+    }
     if (_search.isNotEmpty) {
       final q = _search.toLowerCase();
       list = list
@@ -51,11 +52,15 @@ class _NotesLibraryScreenState extends State<NotesLibraryScreen> {
           )
           .toList();
     }
-    if (_sort == 'date')
+    if (_sort == 'date') {
       list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    if (_sort == 'name') list.sort((a, b) => a.title.compareTo(b.title));
-    if (_sort == 'words')
+    }
+    if (_sort == 'name') {
+      list.sort((a, b) => a.title.compareTo(b.title));
+    }
+    if (_sort == 'words') {
       list.sort((a, b) => b.wordCount.compareTo(a.wordCount));
+    }
     return list;
   }
 
@@ -76,7 +81,7 @@ class _NotesLibraryScreenState extends State<NotesLibraryScreen> {
               border: Border.all(color: _border, width: 1.2),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF4A7CF5).withOpacity(0.10),
+                  color: const Color(0xFF4A7CF5).withValues(alpha: 0.10),
                   blurRadius: 14,
                   offset: const Offset(0, 4),
                 ),
@@ -94,21 +99,21 @@ class _NotesLibraryScreenState extends State<NotesLibraryScreen> {
               decoration: InputDecoration(
                 hintText: 'Search library…',
                 hintStyle: TextStyle(
-                  color: _textGrey.withOpacity(0.55),
+                  color: _textGrey.withValues(alpha: 0.55),
                   fontSize: 14,
                   fontWeight: FontWeight.w400,
                 ),
                 prefixIcon: Icon(
                   Icons.search_rounded,
                   size: 20,
-                  color: _primary.withOpacity(0.70),
+                  color: _primary.withValues(alpha: 0.70),
                 ),
                 suffixIcon: _search.isNotEmpty
                     ? IconButton(
                         icon: Icon(
                           Icons.close_rounded,
                           size: 18,
-                          color: _textGrey.withOpacity(0.65),
+                          color: _textGrey.withValues(alpha: 0.65),
                         ),
                         onPressed: () {
                           _searchCtrl.clear();
@@ -182,7 +187,7 @@ class _NotesLibraryScreenState extends State<NotesLibraryScreen> {
                 '${notes.length} notes',
                 style: TextStyle(
                   fontSize: 13,
-                  color: _textGrey.withOpacity(0.85),
+                  color: _textGrey.withValues(alpha: 0.85),
                 ),
               ),
               const Spacer(),
@@ -324,13 +329,13 @@ class _Chip extends StatelessWidget {
                 end: Alignment.bottomRight,
               )
             : null,
-        color: active ? null : Colors.white.withOpacity(0.72),
+        color: active ? null : Colors.white.withValues(alpha: 0.72),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: active ? _primary : _border),
         boxShadow: active
             ? [
                 BoxShadow(
-                  color: _primary.withOpacity(0.28),
+                  color: _primary.withValues(alpha: 0.28),
                   blurRadius: 8,
                   offset: const Offset(0, 3),
                 ),
@@ -366,7 +371,7 @@ class _Empty extends StatelessWidget {
             width: 72,
             height: 72,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.72),
+              color: Colors.white.withValues(alpha: 0.72),
               shape: BoxShape.circle,
               border: Border.all(color: _border),
             ),
@@ -390,7 +395,10 @@ class _Empty extends StatelessWidget {
             hasSearch
                 ? 'Try adjusting filters or search term'
                 : 'Record your first note to see it here',
-            style: TextStyle(fontSize: 14, color: _textGrey.withOpacity(0.85)),
+            style: TextStyle(
+              fontSize: 14,
+              color: _textGrey.withValues(alpha: 0.85),
+            ),
             textAlign: TextAlign.center,
           ),
         ],
@@ -412,7 +420,7 @@ class _CircleBack extends StatelessWidget {
       width: 40,
       height: 40,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.70),
+        color: Colors.white.withValues(alpha: 0.70),
         shape: BoxShape.circle,
         border: Border.all(color: _border, width: 1.2),
       ),
