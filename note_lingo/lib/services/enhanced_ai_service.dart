@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'local_ai_service.dart';
 
 /// AI enhancement results
 class AiEnhancement {
@@ -67,6 +68,8 @@ class EnhancedAiService {
   factory EnhancedAiService() => _instance;
   EnhancedAiService._internal();
 
+  final LocalAiService _local = LocalAiService();
+
   String? _openaiApiKey;
 
   String get _apiKey {
@@ -81,11 +84,34 @@ class EnhancedAiService {
   /// Extract sentiment from text using local NLP or OpenAI fallback
   Future<Map<String, dynamic>> analyzeSentiment(String text) async {
     try {
-      // Try OpenAI first if API key available
+      // Try local server first if available
+      final base = await _local.getBaseUrlOrNull();
+      if (base != null) {
+        try {
+          final uri = Uri.parse('$base/detect_sentiment');
+          final res = await http
+              .post(
+                uri,
+                headers: {'Content-Type': 'application/json'},
+                body: jsonEncode({'text': text}),
+              )
+              .timeout(const Duration(seconds: 10));
+          if (res.statusCode == 200) {
+            final d = jsonDecode(res.body) as Map<String, dynamic>;
+            return {
+              'sentiment': d['sentiment'] ?? 'neutral',
+              'score': (d['score'] ?? 0.5),
+            };
+          }
+        } catch (_) {}
+      }
+
+      // Try OpenAI if configured
       if (_apiKey.isNotEmpty) {
         return await _analyzeWithOpenAi(text);
       }
-      // Fallback to local sentiment analysis
+
+      // Fallback to local simple analysis
       return _analyzeWithLocal(text);
     } catch (e) {
       return _analyzeWithLocal(text);
@@ -215,13 +241,34 @@ class EnhancedAiService {
   /// Extract Q&A pairs from text
   Future<List<QaItem>> extractQA(String text) async {
     try {
-      // Try OpenAI first
+      // Try local server first
+      final base = await _local.getBaseUrlOrNull();
+      if (base != null) {
+        try {
+          final uri = Uri.parse('$base/extract_qa');
+          final res = await http
+              .post(
+                uri,
+                headers: {'Content-Type': 'application/json'},
+                body: jsonEncode({'text': text}),
+              )
+              .timeout(const Duration(seconds: 12));
+          if (res.statusCode == 200) {
+            final d = jsonDecode(res.body) as Map<String, dynamic>;
+            final list = (d['qa'] as List?) ?? [];
+            return list
+                .map((e) => QaItem.fromJson(Map<String, dynamic>.from(e)))
+                .toList();
+          }
+        } catch (_) {}
+      }
+
+      // Try OpenAI
       if (_apiKey.isNotEmpty) {
         final qaItems = await _extractQaWithOpenAi(text);
-        if (qaItems.isNotEmpty) {
-          return qaItems;
-        }
+        if (qaItems.isNotEmpty) return qaItems;
       }
+
       final localItems = _extractQaWithLocal(text);
       return localItems.isNotEmpty ? localItems : _extractQaFallback(text);
     } catch (e) {
@@ -327,13 +374,32 @@ class EnhancedAiService {
 
   /// Detect speaker transitions/labels in transcript
   Future<List<String>> detectSpeakers(String text) async {
-    // Local speaker detection: Look for patterns like "Speaker:", "Name:", etc.
+    // Try local server diarization first
+    try {
+      final base = await _local.getBaseUrlOrNull();
+      if (base != null) {
+        final uri = Uri.parse('$base/speaker_diarization');
+        final res = await http
+            .post(
+              uri,
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({'text': text}),
+            )
+            .timeout(const Duration(seconds: 12));
+        if (res.statusCode == 200) {
+          final d = jsonDecode(res.body) as Map<String, dynamic>;
+          final sp = (d['speakers'] as List?) ?? [];
+          return sp.map((s) => s.toString()).toList();
+        }
+      }
+    } catch (_) {}
+
+    // Fallback local detection
     final speakers = <String>{};
     final patterns = [
       RegExp(r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s*:', multiLine: true),
       RegExp(r'Speaker\s+(\d+|[A-Z][a-z]+)', multiLine: true),
     ];
-
     for (final pattern in patterns) {
       final matches = pattern.allMatches(text);
       for (final match in matches) {
@@ -341,12 +407,40 @@ class EnhancedAiService {
       }
     }
 
+    // Simple fallback segmentation
+    if (speakers.isEmpty) {
+      final parts = text
+          .split('\n')
+          .where((p) => p.trim().length > 20)
+          .take(4)
+          .toList();
+      return List.generate(parts.length, (i) => 'Speaker ${i + 1}');
+    }
     return speakers.toList().take(10).toList();
   }
 
   /// Extract named entities from text
   Future<Map<String, dynamic>> extractEntities(String text) async {
     try {
+      // Try local server first
+      final base = await _local.getBaseUrlOrNull();
+      if (base != null) {
+        try {
+          final uri = Uri.parse('$base/related_notes');
+          final res = await http
+              .post(
+                uri,
+                headers: {'Content-Type': 'application/json'},
+                body: jsonEncode({'text': text}),
+              )
+              .timeout(const Duration(seconds: 12));
+          if (res.statusCode == 200) {
+            final d = jsonDecode(res.body) as Map<String, dynamic>;
+            return d;
+          }
+        } catch (_) {}
+      }
+
       if (_apiKey.isNotEmpty) {
         return await _extractWithOpenAi(text);
       }
