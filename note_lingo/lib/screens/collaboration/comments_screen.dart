@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/theme/app_theme.dart';
+import '../../models/comment_model.dart';
 import '../../providers/collaboration_provider.dart';
-import '../../services/collaboration_service.dart';
 
 class CommentsScreen extends StatefulWidget {
   final String noteId;
@@ -149,7 +149,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
 }
 
 class _CommentTile extends StatelessWidget {
-  final Comment comment;
+  final CommentModel comment;
   final String noteId;
   final VoidCallback onDelete;
   final VoidCallback onLike;
@@ -203,17 +203,17 @@ class _CommentTile extends StatelessWidget {
                 child: Row(
                   children: [
                     Icon(
-                      comment.isLikedByCurrentUser
+                      comment.likedBy.contains(FirebaseAuth.instance.currentUser?.uid)
                           ? Icons.favorite
                           : Icons.favorite_border,
                       size: 16,
-                      color: comment.isLikedByCurrentUser
+                      color: comment.likedBy.contains(FirebaseAuth.instance.currentUser?.uid)
                           ? Colors.red
                           : Colors.grey[500],
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      '${comment.likes.length}',
+                      '${comment.likes}',
                       style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                     ),
                   ],
