@@ -9,7 +9,11 @@ class ShareNoteDialog extends StatefulWidget {
   final String noteId;
   final String noteTitle;
 
-  const ShareNoteDialog({required this.noteId, required this.noteTitle});
+  const ShareNoteDialog({
+    super.key,
+    required this.noteId,
+    required this.noteTitle,
+  });
 
   @override
   State<ShareNoteDialog> createState() => _ShareNoteDialogState();
@@ -141,23 +145,25 @@ class _AccessLevelSelector extends StatelessWidget {
       'edit': 'Can Edit (full access)',
     };
 
-    return Column(
-      children: levels.entries.map((entry) {
-        return RadioListTile<String>(
-          title: Text(entry.value),
-          subtitle: Text(
-            _getAccessDescription(entry.key),
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          value: entry.key,
-          groupValue: selectedLevel,
-          onChanged: (value) {
-            if (value != null) onChanged(value);
-          },
-          contentPadding: EdgeInsets.zero,
-          dense: true,
-        );
-      }).toList(),
+    return RadioGroup<String>(
+      groupValue: selectedLevel,
+      onChanged: (value) {
+        if (value != null) onChanged(value);
+      },
+      child: Column(
+        children: levels.entries.map((entry) {
+          return RadioListTile<String>(
+            title: Text(entry.value),
+            subtitle: Text(
+              _getAccessDescription(entry.key),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            value: entry.key,
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+          );
+        }).toList(),
+      ),
     );
   }
 
