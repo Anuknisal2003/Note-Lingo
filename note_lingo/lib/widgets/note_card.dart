@@ -39,12 +39,12 @@ class NoteCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: _cardBg.withOpacity(0.9),
+          color: _cardBg.withValues(alpha: 0.9),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: _border),
           boxShadow: [
             BoxShadow(
-              color: _primary.withOpacity(0.08),
+              color: _primary.withValues(alpha: 0.08),
               blurRadius: 14,
               offset: const Offset(0, 4),
             ),
@@ -62,7 +62,7 @@ class NoteCard extends StatelessWidget {
                     vertical: 3,
                   ),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.12),
+                    color: color.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
@@ -81,7 +81,7 @@ class NoteCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: _textGrey.withOpacity(0.9),
+                    color: _textGrey.withValues(alpha: 0.9),
                   ),
                 ),
                 const Spacer(),
@@ -98,7 +98,7 @@ class NoteCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: _textGrey.withOpacity(0.85),
+                    color: _textGrey.withValues(alpha: 0.85),
                   ),
                 ),
               ],
@@ -125,7 +125,7 @@ class NoteCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 height: 1.45,
-                color: _textGrey.withOpacity(0.95),
+                color: _textGrey.withValues(alpha: 0.95),
                 fontWeight: FontWeight.w500,
               ),
               maxLines: 2,
@@ -144,9 +144,9 @@ class NoteCard extends StatelessWidget {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.1),
+                      color: color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: color.withOpacity(0.2)),
+                      border: Border.all(color: color.withValues(alpha: 0.2)),
                     ),
                     child: Text(
                       '#$k',
