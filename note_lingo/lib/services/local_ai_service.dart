@@ -23,6 +23,7 @@ class TranscriptionResult {
 }
 
 class SummaryResult {
+  // ── Core summary fields ───────────────────────────────
   final String title;
   final String categoryHeading;
   final String overview;
@@ -32,6 +33,17 @@ class SummaryResult {
   final String conclusion;
   final String rawSummary;
   final String method;
+
+  // ── Multi-language pipeline fields ───────────────────
+  final String originalTranscript;
+  final String englishTranscript;
+  final String detectedLanguage;
+  final bool isTranslated;
+  final String? translatedOverview;
+  final List<String>? translatedKeyPoints;
+  final String? translatedConclusion;
+  final String? translatedSummary;
+  final double processingTime;
 
   const SummaryResult({
     required this.title,
@@ -43,33 +55,78 @@ class SummaryResult {
     required this.conclusion,
     required this.rawSummary,
     required this.method,
+    this.originalTranscript = '',
+    this.englishTranscript = '',
+    this.detectedLanguage = 'en',
+    this.isTranslated = false,
+    this.translatedOverview,
+    this.translatedKeyPoints,
+    this.translatedConclusion,
+    this.translatedSummary,
+    this.processingTime = 0,
   });
 
   factory SummaryResult.fromJson(Map<String, dynamic> json) {
+    List<String>? tKeyPoints;
+    final rawTKP = json['translated_key_points'];
+    if (rawTKP is List) {
+      tKeyPoints = rawTKP
+          .map((e) => e?.toString() ?? '')
+          .where((s) => s.isNotEmpty)
+          .toList();
+    }
+
     return SummaryResult(
-      title: json['title'] ?? '',
-      categoryHeading: json['category_heading'] ?? '📄 Note Summary',
-      overview: json['overview'] ?? '',
+      title: json['title']?.toString() ?? '',
+      categoryHeading:
+          json['category_heading']?.toString() ?? '📄 Note Summary',
+      overview: json['overview']?.toString() ?? '',
       keyPoints: List<String>.from(json['key_points'] ?? []),
-      pointsLabel: json['points_label'] ?? 'Key Points',
+      pointsLabel: json['points_label']?.toString() ?? 'Key Points',
       keywords: List<String>.from(json['keywords'] ?? []),
-      conclusion: json['conclusion'] ?? '',
-      rawSummary: json['raw_summary'] ?? '',
-      method: json['method'] ?? 'unknown',
+      conclusion: json['conclusion']?.toString() ?? '',
+      rawSummary: json['raw_summary']?.toString() ?? '',
+      method: json['method']?.toString() ?? 'unknown',
+      originalTranscript: json['original_transcript']?.toString() ?? '',
+      englishTranscript: json['english_transcript']?.toString() ?? '',
+      detectedLanguage: json['detected_language']?.toString() ?? 'en',
+      isTranslated: json['is_translated'] == true,
+      translatedOverview: json['translated_overview']?.toString(),
+      translatedKeyPoints: tKeyPoints,
+      translatedConclusion: json['translated_conclusion']?.toString(),
+      translatedSummary: json['translated_summary']?.toString(),
+      processingTime: (json['processing_time'] as num?)?.toDouble() ?? 0,
     );
   }
 
-  /// Build markdown string for display in note detail screen
+  // ── Display getters (prefer translated when available) ─
+  /// Overview in the original detected language (falls back to English).
+  String get displayOverview => (translatedOverview?.isNotEmpty ?? false)
+      ? translatedOverview!
+      : overview;
+
+  /// Key points in the original detected language (falls back to English).
+  List<String> get displayKeyPoints =>
+      (translatedKeyPoints?.isNotEmpty ?? false)
+      ? translatedKeyPoints!
+      : keyPoints;
+
+  /// Conclusion in the original detected language (falls back to English).
+  String get displayConclusion => (translatedConclusion?.isNotEmpty ?? false)
+      ? translatedConclusion!
+      : conclusion;
+
+  /// Build markdown for display — uses translated fields when available.
   String toMarkdown() {
     final buf = StringBuffer();
     buf.writeln(categoryHeading);
     buf.writeln();
     buf.writeln('## 📖 Overview');
-    buf.writeln(overview);
+    buf.writeln(displayOverview);
     buf.writeln();
-    if (keyPoints.isNotEmpty) {
+    if (displayKeyPoints.isNotEmpty) {
       buf.writeln('## 🔑 $pointsLabel');
-      for (final pt in keyPoints) {
+      for (final pt in displayKeyPoints) {
         buf.writeln('• $pt');
       }
       buf.writeln();
@@ -80,7 +137,7 @@ class SummaryResult {
       buf.writeln();
     }
     buf.writeln('## 💡 Conclusion');
-    buf.writeln(conclusion);
+    buf.writeln(displayConclusion);
     return buf.toString().trim();
   }
 }
@@ -93,6 +150,8 @@ class LocalAiService {
   );
 
   static const Duration _timeout = Duration(seconds: 60);
+  // Full pipeline (transcribe + translate + summarise) can take 2-4 min on CPU
+  static const Duration _pipelineTimeout = Duration(minutes: 5);
   String? _activeBaseUrl;
 
   String? _normalizeLanguageHint(String? value) {
@@ -201,7 +260,7 @@ class LocalAiService {
     );
     if (size < 1024) {
       throw Exception(
-        'Audio file appears too small (${size} bytes), likely empty.',
+        'Audio file appears too small ($size bytes), likely empty.',
       );
     }
 
@@ -318,6 +377,54 @@ class LocalAiService {
     } catch (e) {
       throw Exception('Summarization failed: $e');
     }
+  }
+
+  // ── Full pipeline: audio → transcript → translate → summarise → translate back ──
+  Future<SummaryResult> processAudio(
+    File audioFile, {
+    String category = 'general',
+    bool enableDenoise = true,
+    String denoiseMethod = 'auto',
+    double denoiseStrength = 1.0,
+  }) async {
+    if (!await audioFile.exists()) {
+      throw Exception('Audio file not found: ${audioFile.path}');
+    }
+    final size = await audioFile.length();
+    debugPrint(
+      '[LocalAiService] processAudio: file=${audioFile.path} size=$size',
+    );
+    if (size < 1024) {
+      throw Exception(
+        'Audio file appears too small ($size bytes), likely empty.',
+      );
+    }
+
+    final baseUrl = await _resolveBaseUrl();
+    final uri = Uri.parse('$baseUrl/process');
+    final req = http.MultipartRequest('POST', uri);
+
+    req.files.add(await http.MultipartFile.fromPath('audio', audioFile.path));
+    req.fields['category'] = category;
+    req.fields['denoise'] = enableDenoise ? denoiseMethod : '0';
+    if (enableDenoise && denoiseStrength != 1.0) {
+      req.fields['denoise_strength'] = denoiseStrength.toString();
+    }
+
+    final streamed = await req.send().timeout(_pipelineTimeout);
+    final body = await http.Response.fromStream(streamed);
+
+    if (body.statusCode != 200) {
+      final msg = _parseError(body.body);
+      throw Exception('Process pipeline failed (${body.statusCode}): $msg');
+    }
+
+    final data = jsonDecode(body.body) as Map<String, dynamic>;
+    debugPrint(
+      '[LocalAiService] /process response: lang=${data['detected_language']} '
+      'translated=${data['is_translated']} time=${data['processing_time']}s',
+    );
+    return SummaryResult.fromJson(data);
   }
 
   String _parseError(String body) {
