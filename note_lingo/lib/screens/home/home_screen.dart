@@ -102,7 +102,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   )
                 : _navIndex == 1
                 ? const NotesLibraryScreen(embedded: true)
-                : const ProfileScreen(embedded: true),
+                : _navIndex == 2
+                ? const ProfileScreen(embedded: true)
+                : const SizedBox.shrink(),
           ],
         ),
         bottomNavigationBar: _BottomNav(
