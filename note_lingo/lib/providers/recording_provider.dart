@@ -60,7 +60,7 @@ class RecordingProvider extends ChangeNotifier with WidgetsBindingObserver {
   String _transcript = '';
   String _originalTranscript = '';
   String _englishTranscript = '';
-  String _localizedTranscript = '';
+  final String _localizedTranscript = '';
   String _summary = ''; // raw summary text
   SummaryResult? _summaryResult; // full structured result
   List<String> _keywords = [];
@@ -235,64 +235,44 @@ class RecordingProvider extends ChangeNotifier with WidgetsBindingObserver {
         _uploadProgress = 0.5;
         notifyListeners();
 
-        _addLog('Transcribing ${item.id}');
-        final transcription = await _ai.transcribe(
+        _addLog('Processing pipeline for ${item.id}');
+        final summaryResult = await _ai.processAudio(
           audioFile,
+          category: _categoryForApi(item.category),
           enableDenoise: true,
           denoiseMethod: item.denoiseMethod,
           denoiseStrength: item.denoiseStrength,
-          languageHint: item.language,
         );
-        final text = transcription.text;
-        if (text.isEmpty) throw Exception('no transcript');
 
-        final sourceLanguage = transcription.language.isNotEmpty
-            ? transcription.language
-            : item.language;
-        final englishText = await _enhancedAi.translateToEnglish(text);
-
-        final summaryResult = await _ai.summarise(
-          englishText,
-          category: _categoryForApi(item.category),
-        );
-        _originalTranscript = text;
-        _englishTranscript = englishText;
-        _transcript = englishText;
-        _summaryResult = summaryResult;
-        final summaryMarkdown = summaryResult.toMarkdown();
-        _summary = summaryMarkdown;
-        _localizedTranscript = englishText;
-        if (sourceLanguage != 'en') {
-          try {
-            _localizedTranscript = await _enhancedAi.translate(
-              englishText,
-              sourceLanguage,
-            );
-            _summary = await _enhancedAi.translate(
-              summaryMarkdown,
-              sourceLanguage,
-            );
-          } catch (_) {
-            _localizedTranscript = englishText;
-            _summary = summaryMarkdown;
-          }
+        if (summaryResult.originalTranscript.isEmpty) {
+          throw Exception('no transcript');
         }
+
+        _originalTranscript = summaryResult.originalTranscript;
+        _englishTranscript = summaryResult.englishTranscript.isNotEmpty
+            ? summaryResult.englishTranscript
+            : summaryResult.originalTranscript;
+        _transcript = summaryResult.originalTranscript;
+        _summaryResult = summaryResult;
+        _summary = summaryResult.toMarkdown();
         _keywords = summaryResult.keywords;
         _noteTitle = summaryResult.title.isNotEmpty
             ? summaryResult.title
-            : _extractTitle(englishText);
+            : _extractTitle(_englishTranscript);
         _category = item.category;
-        _language = sourceLanguage;
+        _language = summaryResult.detectedLanguage.isNotEmpty
+            ? summaryResult.detectedLanguage
+            : item.language;
         _isFavorite = item.isFavorite;
-        _enhancement = await _enhancedAi.analyzeNote(englishText);
-        _smartTags = await _smartOrg.autoTag(englishText);
+        _enhancement = await _enhancedAi.analyzeNote(_englishTranscript);
+        _smartTags = await _smartOrg.autoTag(_englishTranscript);
 
         await _saveNoteToFirestore(audioFile);
         try {
           await _draftService.deleteDraft(item.id);
         } catch (_) {}
         _addLog('${item.id} ✓');
-        return (text, summaryResult.toMarkdown());
+        return (summaryResult.originalTranscript, summaryResult.toMarkdown());
       });
 
       int ok = results.values.where((s) => s).length;
@@ -495,13 +475,13 @@ class RecordingProvider extends ChangeNotifier with WidgetsBindingObserver {
         return;
       }
 
-      // ── Step 2: Transcribe ───────────────
-      _statusMsg = 'Transcribing......';
+      // ── Step 2: Full pipeline (transcribe → translate → summarise) ──
+      _statusMsg = 'Transcribing → Translating → Summarising…';
       _uploadProgress = 0.45;
-      _addLog('Sending audio to Whisper endpoint');
+      _addLog('Sending audio to /process pipeline');
       notifyListeners();
 
-      final transcribeWatch = Stopwatch()..start();
+      final pipelineWatch = Stopwatch()..start();
       final fileSize = await audioFile.length();
       _addLog('Audio path: ${audioFile.path} (size: $fileSize bytes)');
 
@@ -512,22 +492,37 @@ class RecordingProvider extends ChangeNotifier with WidgetsBindingObserver {
         return;
       }
 
-      final transcription = await _ai.transcribe(
-        audioFile,
-        enableDenoise: _noiseCancellation,
-        denoiseMethod: _denoiseMethod,
-        denoiseStrength: _denoiseStrength,
-        languageHint: _language,
-      );
-      final text = transcription.text;
-      transcribeWatch.stop();
-      _addLog(
-        'Transcription complete in ${transcribeWatch.elapsedMilliseconds} ms',
-      );
+      SummaryResult result;
+      try {
+        result = await _ai.processAudio(
+          audioFile,
+          category: _categoryForApi(_category),
+          enableDenoise: _noiseCancellation,
+          denoiseMethod: _denoiseMethod,
+          denoiseStrength: _denoiseStrength,
+        );
+        pipelineWatch.stop();
+        _addLog(
+          'Pipeline complete in ${pipelineWatch.elapsedMilliseconds} ms  '
+          'lang=${result.detectedLanguage}  translated=${result.isTranslated}',
+        );
+      } catch (pipelineErr) {
+        _addLog('Pipeline failed: $pipelineErr');
+        final errStr = pipelineErr.toString();
+        if (errStr.contains('TimeoutException')) {
+          _setError(
+            'Processing timed out. The AI model may need more time. '
+            'Try a shorter recording or ensure the Flask server is running on a capable machine.',
+          );
+        } else {
+          _setError('Processing failed: $pipelineErr');
+        }
+        return;
+      }
 
-      if (text.isEmpty) {
+      if (result.originalTranscript.isEmpty) {
         final size = await audioFile.length();
-        _addLog('Transcription returned empty text (file size: $size bytes)');
+        _addLog('Pipeline returned empty transcript (file size: $size bytes)');
         _setError(
           size < 2048
               ? 'No audio was captured. On the Android emulator, enable microphone input in the emulator settings or test on a device with a working mic.'
@@ -535,57 +530,18 @@ class RecordingProvider extends ChangeNotifier with WidgetsBindingObserver {
         );
         return;
       }
-      // Keep original, then translate to English as canonical form
-      _originalTranscript = text;
-      final sourceLanguage = transcription.language.isNotEmpty
-          ? transcription.language
+
+      // Populate provider state from pipeline result
+      _originalTranscript = result.originalTranscript;
+      _englishTranscript = result.englishTranscript.isNotEmpty
+          ? result.englishTranscript
+          : result.originalTranscript;
+      _transcript = result.originalTranscript; // original stored in NoteModel
+      _language = result.detectedLanguage.isNotEmpty
+          ? result.detectedLanguage
           : _language;
-      _language = sourceLanguage;
-      _addLog('Translating transcript to English (if needed)');
-      _englishTranscript = await _enhancedAi.translateToEnglish(text);
-      _transcript = _englishTranscript;
-
-      // ── Step 3: Summarise with custom BART ───────────
-      _statusMsg = 'Summarising with custom AI model…';
-      _uploadProgress = 0.7;
-      _addLog('Sending transcript to BART summariser');
-      notifyListeners();
-
-      SummaryResult result;
-      try {
-        final summaryWatch = Stopwatch()..start();
-        result = await _ai.summarise(
-          _transcript,
-          category: _categoryForApi(_category),
-        );
-        summaryWatch.stop();
-        _addLog(
-          'Summarisation complete in ${summaryWatch.elapsedMilliseconds} ms',
-        );
-      } catch (_) {
-        // Fallback: use simple local extraction
-        result = _localFallbackSummary(text);
-        _addLog('Summariser fallback used');
-      }
-
       _summaryResult = result;
       _summary = result.toMarkdown();
-      // Localize transcript/summary to user's preferred language if requested
-      if (sourceLanguage != 'en') {
-        try {
-          _addLog('Translating transcript and summary to $sourceLanguage');
-          _localizedTranscript = await _enhancedAi.translate(
-            _englishTranscript,
-            sourceLanguage,
-          );
-          _summary = await _enhancedAi.translate(_summary, sourceLanguage);
-        } catch (_) {
-          _addLog('Translation to $sourceLanguage failed; showing English');
-          _localizedTranscript = _englishTranscript;
-        }
-      } else {
-        _localizedTranscript = _englishTranscript;
-      }
       _keywords = result.keywords;
       _noteTitle = result.title.isNotEmpty
           ? result.title
@@ -607,100 +563,6 @@ class RecordingProvider extends ChangeNotifier with WidgetsBindingObserver {
     } catch (e) {
       _setError('Processing failed: $e');
     }
-  }
-
-  // ── Local fallback summary ────────────────────────────
-  SummaryResult _localFallbackSummary(String text) {
-    final sentences = text
-        .split(RegExp(r'(?<=[.!?])\s+'))
-        .where((s) => s.trim().length > 10)
-        .toList();
-
-    final overview = sentences.isNotEmpty ? sentences.first : text;
-    final keyPoints = sentences.length > 1
-        ? sentences.sublist(1, sentences.length.clamp(1, 4))
-        : <String>[];
-    final conclusion = sentences.length > 1 ? sentences.last : overview;
-    final keywords = _simpleKeywords(text);
-
-    final styles = {
-      NoteCategory.lecture: ['📚 Lecture Notes', 'Key Concepts'],
-      NoteCategory.meeting: ['🗓️ Meeting Minutes', 'Action Items'],
-      NoteCategory.interview: ['🎙️ Interview Notes', 'Key Responses'],
-      NoteCategory.personal: ['📝 Personal Note', 'Key Points'],
-      NoteCategory.other: ['📄 Note Summary', 'Key Points'],
-    };
-    final style = styles[_category] ?? styles[NoteCategory.other]!;
-
-    return SummaryResult(
-      title: _extractTitle(text),
-      categoryHeading: style[0],
-      overview: overview,
-      keyPoints: keyPoints,
-      pointsLabel: style[1],
-      keywords: keywords,
-      conclusion: conclusion,
-      rawSummary: sentences.take(3).join(' '),
-      method: 'local-fallback',
-    );
-  }
-
-  List<String> _simpleKeywords(String text) {
-    const stop = {
-      'the',
-      'a',
-      'an',
-      'is',
-      'are',
-      'was',
-      'were',
-      'be',
-      'have',
-      'has',
-      'had',
-      'do',
-      'does',
-      'did',
-      'will',
-      'would',
-      'could',
-      'should',
-      'to',
-      'of',
-      'in',
-      'on',
-      'at',
-      'by',
-      'for',
-      'with',
-      'and',
-      'but',
-      'or',
-      'this',
-      'that',
-      'i',
-      'you',
-      'it',
-      'we',
-      'they',
-      'not',
-      'just',
-      'very',
-      'also',
-      'than',
-      'too',
-      'all',
-      'each',
-    };
-    final freq = <String, int>{};
-    for (final w in text.toLowerCase().split(RegExp(r'\W+'))) {
-      if (w.length >= 4 && !stop.contains(w)) {
-        freq[w] = (freq[w] ?? 0) + 1;
-      }
-    }
-    final sorted = freq.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-    return sorted.take(8).map((e) => e.key).toList();
   }
 
   String _extractTitle(String text) {
@@ -773,8 +635,12 @@ class RecordingProvider extends ChangeNotifier with WidgetsBindingObserver {
     _addLog('Running AI enhancements');
     notifyListeners();
 
-    _enhancement = await _enhancedAi.analyzeNote(_transcript);
-    _smartTags = await _smartOrg.autoTag(_transcript);
+    _enhancement = await _enhancedAi.analyzeNote(
+      _englishTranscript.isNotEmpty ? _englishTranscript : _transcript,
+    );
+    _smartTags = await _smartOrg.autoTag(
+      _englishTranscript.isNotEmpty ? _englishTranscript : _transcript,
+    );
 
     final note = NoteModel(
       id: '',
