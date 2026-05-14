@@ -272,13 +272,6 @@ class _NoteDetailScreenState extends State<NoteDetailScreen>
                 MaterialPageRoute(builder: (_) => ExportScreen(note: note)),
               );
             }
-            if (v == 'share') {
-              showDialog(
-                context: context,
-                builder: (_) =>
-                    ShareNoteDialog(noteId: note.id, noteTitle: note.title),
-              );
-            }
           },
           itemBuilder: (_) => [
             const PopupMenuItem(
