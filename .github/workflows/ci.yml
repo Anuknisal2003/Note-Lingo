@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  # ──────────────────────────────────────────────
+  #  Flutter — analyze + test
+  # ──────────────────────────────────────────────
+  flutter:
+    name: Flutter Analyze & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.32.0'
+          channel: stable
+          cache: true
+
+      - name: Write google-services.json
+        working-directory: note_lingo/android/app
+        run: echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > google-services.json
+
+      - name: Write assets/.env
+        working-directory: note_lingo
+        run: |
+          echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" > assets/.env
+          echo "LOCAL_AI_BASE_URL=http://localhost:5000" >> assets/.env
+
+      - name: Install Flutter dependencies
+        working-directory: note_lingo
+        run: flutter pub get
+
+      - name: Dart analyze
+        working-directory: note_lingo
+        run: flutter analyze --fatal-infos --fatal-warnings
+
+      - name: Run unit tests
+        working-directory: note_lingo
+        run: flutter test --coverage
+
+      - name: Upload coverage report
+        if: github.ref == 'refs/heads/main'
+        uses: codecov/codecov-action@v4
+        with:
+          files: note_lingo/coverage/lcov.info
+          flags: flutter
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  # ──────────────────────────────────────────────
+  #  Flask / Python — lint + smoke test
+  # ──────────────────────────────────────────────
+  flask:
+    name: Flask Lint & Import Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install dependencies
+        working-directory: ai_note_model
+        run: |
+          pip install --upgrade pip
+          pip install flask flask-cors
+          pip install flake8
+
+      - name: Lint with flake8
+        working-directory: ai_note_model/flask_api
+        run: |
+          # Treat syntax errors as failures; ignore long lines (E501) and unused imports in __init__ (F401)
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --count --exit-zero --max-line-length=120 --statistics
+
+      - name: Verify Flask app imports without error
+        working-directory: ai_note_model
+        env:
+          FLASK_APP_IMPORT_CHECK: "1"
+        run: |
+          # Only check syntax — don't actually start the server or load heavy ML models
+          python -c "
+          import ast, sys
+          for path in ['flask_api/app.py', 'flask_api/translation_service.py']:
+              with open(path) as f:
+                  src = f.read()
+              ast.parse(src)
+              print(f'  OK  {path}')
+          "
