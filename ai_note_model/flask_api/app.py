@@ -992,21 +992,26 @@ def process():
 # ════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
+    # Force UTF-8 output so emoji in print() works on Windows (cp1252 default)
+    import io, sys
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
+
     print("=" * 60)
-    print("  Note Lingo — AI Server")
+    print("  Note Lingo - AI Server")
     print("=" * 60)
-    print("\n  🚀  Lazy-loading enabled:")
-    print("      - Models load on first request (faster startup)")
-    print("      - Use GET /preload to warm up models in background")
-    print("      - Use GET /cache/stats to monitor cache performance")
+    print("\n  [*]  Lazy-loading enabled:")
+    print("       - Models load on first request (faster startup)")
+    print("       - Use GET /preload to warm up models in background")
+    print("       - Use GET /cache/stats to monitor cache performance")
     print("=" * 60)
 
     # Optional: Start async preload in background
     # Uncomment to warm models while server starts:
     # preload_models_async()
 
-    print("\n  🌐  Server running on http://0.0.0.0:5000")
-    print("  📱  Make sure phone and PC are on the same WiFi")
+    print("\n  [*]  Server running on http://0.0.0.0:5000")
+    print("  [*]  Make sure phone and PC are on the same WiFi")
     print("=" * 60)
 
     app.run(host="0.0.0.0", port=5000, debug=False)
