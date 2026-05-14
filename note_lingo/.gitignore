@@ -44,6 +44,9 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# .gitignore
+# Secrets — never commit these
 assets/.env
 .env
+android/app/google-services.json
+android/app/release.keystore
+android/local.properties
