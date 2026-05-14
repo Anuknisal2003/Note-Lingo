@@ -290,8 +290,9 @@ class _RecordingScreenState extends State<RecordingScreen>
                           if (context.mounted) {
                             await rp.syncOfflineQueue();
                             // ignore: use_build_context_synchronously
-                            if (context.mounted)
+                            if (context.mounted) {
                               _showOfflineItemsSheet(context);
+                            }
                           }
                         },
                         style: TextButton.styleFrom(
@@ -343,8 +344,9 @@ class _RecordingScreenState extends State<RecordingScreen>
                                   );
                                   if (context.mounted) {
                                     await rp.syncOfflineQueue();
-                                    if (context.mounted)
+                                    if (context.mounted) {
                                       _showOfflineItemsSheet(context);
+                                    }
                                   }
                                 },
                                 style: TextButton.styleFrom(

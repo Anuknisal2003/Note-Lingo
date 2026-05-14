@@ -62,7 +62,6 @@ flutter:
 
   assets:
     - assets/images/
-    - assets/animations/
     - assets/.env
 
 dependency_overrides:
