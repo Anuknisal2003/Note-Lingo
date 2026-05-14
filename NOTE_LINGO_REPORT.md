@@ -1,6 +1,6 @@
 # Note Lingo — Full Technical Report
 
-> Generated: May 14, 2026
+> Generated: May 14, 2026 — Final clean build (v1.0.0)
 
 ---
 
@@ -435,3 +435,47 @@ User taps Record
 5. **Sri Lankan language focus** — Sinhala and Tamil are first-class supported languages, uncommon in AI note-taking tools.
 6. **Rich per-note AI insights** — sentiment scoring, named entity recognition, automatic Q&A extraction, and speaker diarization on every note.
 7. **Smart organization** — auto-tagging and smart folder assignment driven by content analysis, requiring no manual effort from the user.
+
+---
+
+## 15. CI/CD Pipeline
+
+Two GitHub Actions workflows located in `.github/workflows/`:
+
+### `ci.yml` — Continuous Integration (every push / PR)
+
+| Job | Steps |
+|---|---|
+| **Flutter Analyze & Test** | `flutter pub get` → `flutter analyze --fatal-warnings` → `flutter test --coverage` |
+| **Flask Lint & Import Check** | `flake8` syntax/error lint → AST parse check on `app.py` + `translation_service.py` |
+
+### `build.yml` — Build & Release (on `v*.*.*` tag or manual trigger)
+
+| Job | Steps |
+|---|---|
+| **Build Android APK** | Set up Java 17 + Flutter 3.41.9 → write secrets → `flutter build apk --release --split-per-abi` → upload APK artifacts |
+| **GitHub Release** | Download APK artifacts → create GitHub Release with APKs attached |
+
+### Required GitHub Secrets
+
+| Secret | Purpose |
+|---|---|
+| `GOOGLE_SERVICES_JSON` | Base64-encoded `google-services.json` |
+| `OPENAI_API_KEY` | OpenAI API key for AI features |
+| `LOCAL_AI_BASE_URL` | Flask server URL (LAN IP or ngrok) |
+
+### Release Process
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+# → triggers Build & Release workflow
+# → APKs attached to GitHub Releases page automatically
+```
+
+### Flask ↔ Mobile Networking
+
+- Flask binds to `0.0.0.0:5000` (all interfaces)
+- Flutter reads `LOCAL_AI_BASE_URL` from `assets/.env`
+- Both devices must be on the same Wi-Fi, or use ngrok for cross-network access
+- `LocalAiService` auto-probes candidate URLs via `/health` endpoint with 3-second timeout
