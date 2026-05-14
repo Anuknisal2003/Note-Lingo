@@ -14,6 +14,8 @@ void main() {
         language: 'en',
         category: NoteCategory.personal,
         keywords: ['hello', 'world'],
+        wordCount: 2,
+        duration: 0,
         createdAt: now,
         updatedAt: now,
       );
@@ -37,6 +39,8 @@ void main() {
         language: 'en',
         category: NoteCategory.other,
         keywords: const [],
+        wordCount: 0,
+        duration: 0,
         createdAt: now,
         updatedAt: now,
       );
@@ -67,9 +71,10 @@ void main() {
         language: 'en',
         category: NoteCategory.other,
         keywords: const [],
+        wordCount: 0,
+        duration: 125,
         createdAt: now,
         updatedAt: now,
-        duration: 125,
       );
       expect(note.formattedDuration, '02:05');
     });
