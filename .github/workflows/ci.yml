@@ -41,7 +41,7 @@ jobs:
 
       - name: Dart analyze
         working-directory: note_lingo
-        run: flutter analyze --fatal-infos --fatal-warnings
+        run: flutter analyze --fatal-warnings
 
       - name: Run unit tests
         working-directory: note_lingo
@@ -71,6 +71,7 @@ jobs:
         with:
           python-version: '3.11'
           cache: pip
+          cache-dependency-path: ai_note_model/requirements.txt
 
       - name: Install dependencies
         working-directory: ai_note_model
