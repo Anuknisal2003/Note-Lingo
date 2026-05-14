@@ -1,30 +1,77 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:note_lingo/main.dart';
+import 'package:note_lingo/models/note_model.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const NoteLingo());
+  group('NoteModel', () {
+    test('fields are set correctly on construction', () {
+      final now = DateTime(2026, 1, 1);
+      final note = NoteModel(
+        id: 'test-id',
+        userId: 'user-1',
+        title: 'Test Note',
+        transcription: 'Hello world',
+        summary: 'A summary',
+        language: 'en',
+        category: NoteCategory.personal,
+        keywords: ['hello', 'world'],
+        createdAt: now,
+        updatedAt: now,
+      );
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+      expect(note.id, 'test-id');
+      expect(note.title, 'Test Note');
+      expect(note.language, 'en');
+      expect(note.keywords, ['hello', 'world']);
+      expect(note.isFavorite, false);
+      expect(note.category, NoteCategory.personal);
+    });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    test('copyWith updates fields without changing others', () {
+      final now = DateTime(2026, 1, 1);
+      final note = NoteModel(
+        id: 'id',
+        userId: 'user',
+        title: 'Original',
+        transcription: '',
+        summary: '',
+        language: 'en',
+        category: NoteCategory.other,
+        keywords: const [],
+        createdAt: now,
+        updatedAt: now,
+      );
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+      final updated = note.copyWith(title: 'Updated', isFavorite: true);
+      expect(updated.title, 'Updated');
+      expect(updated.isFavorite, true);
+      expect(updated.id, 'id');
+      expect(updated.language, 'en');
+    });
+
+    test('NoteCategory has correct labels', () {
+      expect(NoteCategory.lecture.label, 'Lecture');
+      expect(NoteCategory.meeting.label, 'Meeting');
+      expect(NoteCategory.interview.label, 'Interview');
+      expect(NoteCategory.personal.label, 'Personal');
+      expect(NoteCategory.other.label, 'Other');
+    });
+
+    test('formattedDuration formats correctly', () {
+      final now = DateTime(2026, 1, 1);
+      final note = NoteModel(
+        id: 'id',
+        userId: 'user',
+        title: 'T',
+        transcription: '',
+        summary: '',
+        language: 'en',
+        category: NoteCategory.other,
+        keywords: const [],
+        createdAt: now,
+        updatedAt: now,
+        duration: 125,
+      );
+      expect(note.formattedDuration, '02:05');
+    });
   });
 }

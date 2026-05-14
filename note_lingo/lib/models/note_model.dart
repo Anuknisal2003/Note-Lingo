@@ -58,8 +58,6 @@ class NoteModel {
   final List<String> speakers; // Speaker labels
   final List<Map<String, dynamic>> qaItems; // Q&A pairs
   final List<String> entities; // Named entities
-  final List<Map<String, dynamic>> sharedWith; // Shared access
-  final int commentCount;
 
   const NoteModel({
     required this.id,
@@ -84,8 +82,6 @@ class NoteModel {
     this.speakers = const [],
     this.qaItems = const [],
     this.entities = const [],
-    this.sharedWith = const [],
-    this.commentCount = 0,
   });
 
   // Backward-compat alias used by some screens/providers.
@@ -127,8 +123,6 @@ class NoteModel {
       speakers: List<String>.from(json['speakers'] ?? []),
       qaItems: List<Map<String, dynamic>>.from(json['qaItems'] ?? []),
       entities: List<String>.from(json['entities'] ?? []),
-      sharedWith: List<Map<String, dynamic>>.from(json['sharedWith'] ?? []),
-      commentCount: json['commentCount'] ?? 0,
     );
   }
 
@@ -165,8 +159,6 @@ class NoteModel {
       speakers: List<String>.from(d['speakers'] ?? []),
       qaItems: List<Map<String, dynamic>>.from(d['qaItems'] ?? []),
       entities: List<String>.from(d['entities'] ?? []),
-      sharedWith: List<Map<String, dynamic>>.from(d['sharedWith'] ?? []),
-      commentCount: d['commentCount'] ?? 0,
     );
   }
 
@@ -194,8 +186,6 @@ class NoteModel {
       'speakers': speakers,
       'qaItems': qaItems,
       'entities': entities,
-      'sharedWith': sharedWith,
-      'commentCount': commentCount,
     };
   }
 
@@ -225,8 +215,6 @@ class NoteModel {
     List<String>? speakers,
     List<Map<String, dynamic>>? qaItems,
     List<String>? entities,
-    List<Map<String, dynamic>>? sharedWith,
-    int? commentCount,
   }) {
     return NoteModel(
       id: id ?? this.id,
@@ -251,8 +239,6 @@ class NoteModel {
       speakers: speakers ?? this.speakers,
       qaItems: qaItems ?? this.qaItems,
       entities: entities ?? this.entities,
-      sharedWith: sharedWith ?? this.sharedWith,
-      commentCount: commentCount ?? this.commentCount,
     );
   }
 
