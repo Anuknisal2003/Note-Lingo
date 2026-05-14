@@ -6,7 +6,6 @@ import 'package:provider/provider.dart';
 import '../../models/note_model.dart';
 import '../../providers/notes_provider.dart';
 import '../export/export_screen.dart';
-import '../collaboration/share_note_dialog.dart';
 
 const _bgTop = Color(0xFF6AABF8);
 const _bgMid = Color(0xFF9AC8FB);
@@ -282,10 +281,6 @@ class _NoteDetailScreenState extends State<NoteDetailScreen>
             }
           },
           itemBuilder: (_) => [
-            const PopupMenuItem(
-              value: 'share',
-              child: Text('Share Note', style: TextStyle(color: _textDark)),
-            ),
             const PopupMenuItem(
               value: 'export',
               child: Text('Export Note', style: TextStyle(color: _textDark)),
